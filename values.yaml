@@ -126,15 +126,27 @@ envFromSecret: []
 
 # Existing Secret configuration (RECOMMENDED for production)
 # Use this to reference a pre-created Kubernetes Secret instead of storing secrets in values.yaml
-# Create the secret first: kubectl create secret generic openclaw-secrets --from-literal=ANTHROPIC_API_KEY=your-key
+# 
+# Step 1: Create the secret first:
+#   kubectl create secret generic openclaw-secrets --from-literal=ANTHROPIC_API_KEY=your-api-key-here
+#
+# Step 2: Configure it below:
 existingSecret:
-  enabled: false
+  # Name of the pre-created Kubernetes Secret
   name: ""
-  # Keys to load from the existing secret
-  keys: []
-    # Example:
-    # - name: ANTHROPIC_API_KEY
-    #   key: ANTHROPIC_API_KEY  # key name in the secret
+  # Map of environment variable names to secret keys
+  # Format: envVarName: secretKeyName
+  # If the env var name matches the secret key name, you can use a simpler format (see examples)
+  keys: {}
+    # Example 1: Simple case (env var name = secret key name)
+    # ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    #
+    # Example 2: Different env var name than secret key
+    # API_KEY: ANTHROPIC_API_KEY  # env var will be API_KEY, loads from secret key ANTHROPIC_API_KEY
+    #
+    # Example 3: Multiple keys
+    # ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    # TELEGRAM_BOT_TOKEN: TELEGRAM_BOT_TOKEN
 
 # ConfigMap data (non-sensitive configuration)
 configMap:

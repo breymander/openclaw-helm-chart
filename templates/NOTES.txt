@@ -33,7 +33,7 @@
    kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "openclaw.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" --tail=100
 
 5. Verify your API key is configured:
-{{- if .Values.existingSecret.enabled }}
+{{- if .Values.existingSecret.name }}
    kubectl get secret {{ .Values.existingSecret.name }} --namespace {{ .Release.Namespace }} -o jsonpath='{.data.ANTHROPIC_API_KEY}' | base64 -d && echo
 {{- else if .Values.secret.enabled }}
    kubectl get secret {{ include "openclaw.secretName" . }} --namespace {{ .Release.Namespace }} -o jsonpath='{.data.ANTHROPIC_API_KEY}' | base64 -d && echo

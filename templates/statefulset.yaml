@@ -78,13 +78,13 @@ spec:
         - {{- toYaml . | nindent 10 }}
         {{- end }}
         {{- end }}
-        {{- if .Values.existingSecret.enabled }}
-        {{- range .Values.existingSecret.keys }}
-        - name: {{ .name }}
+        {{- if and .Values.existingSecret.name .Values.existingSecret.keys }}
+        {{- range $envVarName, $secretKey := .Values.existingSecret.keys }}
+        - name: {{ $envVarName }}
           valueFrom:
             secretKeyRef:
               name: {{ $.Values.existingSecret.name }}
-              key: {{ .key }}
+              key: {{ $secretKey }}
         {{- end }}
         {{- else if and .Values.secret.enabled .Values.secret.data }}
         {{- range $key, $value := .Values.secret.data }}

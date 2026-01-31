@@ -30,16 +30,22 @@ helm repo update
 #### Option 1: Create Secret First (Recommended)
 
 ```bash
-# Create a Kubernetes Secret with your API key
+# Step 1: Create a Kubernetes Secret with your API key
 kubectl create secret generic openclaw-secrets \
   --from-literal=ANTHROPIC_API_KEY=your-api-key-here
 
-# Install the chart referencing the existing secret
+# Step 2: Install the chart referencing the existing secret
 helm install my-openclaw ./openclaw \
-  --set existingSecret.enabled=true \
   --set existingSecret.name=openclaw-secrets \
-  --set existingSecret.keys[0].name=ANTHROPIC_API_KEY \
-  --set existingSecret.keys[0].key=ANTHROPIC_API_KEY
+  --set existingSecret.keys.ANTHROPIC_API_KEY=ANTHROPIC_API_KEY
+```
+
+Or use a values file:
+```yaml
+existingSecret:
+  name: openclaw-secrets
+  keys:
+    ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
 ```
 
 #### Option 2: Use envFromSecret
@@ -85,9 +91,8 @@ The following table lists the configurable parameters and their default values.
 | `env.CLAUDE_MODEL` | Claude model to use | `claude-3-5-sonnet-20241022` |
 | `env.PORT` | Service port | `18789` |
 | `env.HOST` | Bind host | `0.0.0.0` |
-| `existingSecret.enabled` | Use existing Kubernetes Secret | `false` |
-| `existingSecret.name` | Name of existing Secret | `""` |
-| `existingSecret.keys` | Keys to load from existing Secret | `[]` |
+| `existingSecret.name` | Name of existing Kubernetes Secret | `""` |
+| `existingSecret.keys` | Map of env var names to secret keys (format: `envVarName: secretKeyName`) | `{}` |
 | `env.PORT` | Service port | `18789` |
 | `env.HOST` | Bind host | `0.0.0.0` |
 | `env.LOG_LEVEL` | Logging level | `info` |
@@ -214,15 +219,29 @@ kubectl create secret generic openclaw-secrets \
 Then install with values.yaml:
 ```yaml
 existingSecret:
-  enabled: true
   name: openclaw-secrets
   keys:
-    - name: ANTHROPIC_API_KEY
-      key: ANTHROPIC_API_KEY
+    ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
 
 env:
   CLAUDE_MODEL: "claude-3-5-sonnet-20241022"
   PORT: "18789"
+```
+
+**Note**: The format is `envVarName: secretKeyName`. If they're the same (most common case), you can use:
+```yaml
+existingSecret:
+  name: openclaw-secrets
+  keys:
+    ANTHROPIC_API_KEY: ANTHROPIC_API_KEY  # env var name = secret key name
+```
+
+If the env var name differs from the secret key:
+```yaml
+existingSecret:
+  name: openclaw-secrets
+  keys:
+    API_KEY: ANTHROPIC_API_KEY  # env var will be API_KEY, loads from secret key ANTHROPIC_API_KEY
 ```
 
 ### Using envFromSecret
@@ -351,13 +370,10 @@ kubectl create secret generic openclaw-secrets \
 
 ```yaml
 existingSecret:
-  enabled: true
   name: openclaw-secrets
   keys:
-    - name: ANTHROPIC_API_KEY
-      key: ANTHROPIC_API_KEY
-    - name: TELEGRAM_BOT_TOKEN
-      key: TELEGRAM_BOT_TOKEN
+    ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    TELEGRAM_BOT_TOKEN: TELEGRAM_BOT_TOKEN
 ```
 
 ### With Per-Replica Configuration
@@ -400,7 +416,8 @@ OpenClaw has powerful capabilities that require careful security configuration:
 1. **API Keys and Secrets**: 
    - **NEVER** put API keys, passwords, or tokens directly in `values.yaml` or pass them via `--set`
    - **ALWAYS** use Kubernetes Secrets created separately
-   - Use `existingSecret` or `envFromSecret` to reference pre-created secrets
+   - Use `existingSecret` (simpler) or `envFromSecret` to reference pre-created secrets
+   - With `existingSecret`, use the format: `envVarName: secretKeyName` in the `keys` map
    - The chart's `secret.enabled` is set to `false` by default to prevent accidental secret exposure
    - For production, use external secret management tools (e.g., Sealed Secrets, External Secrets Operator, Vault)
 

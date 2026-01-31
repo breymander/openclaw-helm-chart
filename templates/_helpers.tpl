@@ -88,9 +88,9 @@ Excludes any keys that are provided via existingSecret or secret
 */}}
 {{- define "openclaw.envVars" -}}
 {{- $secretKeys := dict }}
-{{- if .Values.existingSecret.enabled }}
-  {{- range .Values.existingSecret.keys }}
-    {{- $_ := set $secretKeys .name true }}
+{{- if .Values.existingSecret.name }}
+  {{- range $envVarName, $secretKey := .Values.existingSecret.keys }}
+    {{- $_ := set $secretKeys $envVarName true }}
   {{- end }}
 {{- else if .Values.secret.enabled }}
   {{- range $key, $value := .Values.secret.data }}

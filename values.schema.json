@@ -123,32 +123,20 @@
     "existingSecret": {
       "type": "object",
       "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Use existing Kubernetes Secret"
-        },
         "name": {
           "type": "string",
-          "description": "Name of existing Secret"
+          "description": "Name of existing Kubernetes Secret"
         },
         "keys": {
-          "type": "array",
-          "description": "Keys to load from existing Secret",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Environment variable name"
-              },
-              "key": {
-                "type": "string",
-                "description": "Key name in the secret"
-              }
-            }
+          "type": "object",
+          "description": "Map of environment variable names to secret keys (format: envVarName: secretKeyName)",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Secret key name"
           }
         }
-      }
+      },
+      "required": ["name"]
     },
     "extraEnv": {
       "type": "array",

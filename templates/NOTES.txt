@@ -1,0 +1,52 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "openclaw.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "openclaw.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "openclaw.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "openclaw.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT={{ .Values.service.port }}
+  echo "Visit http://127.0.0.1:{{ .Values.service.port }} to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME {{ .Values.service.port }}:$CONTAINER_PORT
+{{- end }}
+
+2. OpenClaw Dashboard Information:
+   - Port: {{ .Values.service.port }}
+   - Service: {{ include "openclaw.fullname" . }}
+   - Namespace: {{ .Release.Namespace }}
+
+3. Check the status of your deployment:
+   kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "openclaw.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+4. View logs:
+   kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "openclaw.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" --tail=100
+
+5. Verify your API key is configured:
+{{- if .Values.existingSecret.enabled }}
+   kubectl get secret {{ .Values.existingSecret.name }} --namespace {{ .Release.Namespace }} -o jsonpath='{.data.ANTHROPIC_API_KEY}' | base64 -d && echo
+{{- else if .Values.secret.enabled }}
+   kubectl get secret {{ include "openclaw.secretName" . }} --namespace {{ .Release.Namespace }} -o jsonpath='{.data.ANTHROPIC_API_KEY}' | base64 -d && echo
+{{- else }}
+   ⚠️  WARNING: No secret configuration found. Make sure to configure your ANTHROPIC_API_KEY using existingSecret or envFromSecret.
+{{- end }}
+
+6. For more information, visit:
+   - OpenClaw GitHub: https://github.com/openclaw/openclaw
+   - Chart README: See README.md for detailed configuration options
+
+{{- if .Values.ingress.enabled }}
+{{- if .Values.ingress.tls }}
+⚠️  Note: TLS is enabled. Make sure your TLS certificates are properly configured.
+{{- end }}
+{{- end }}

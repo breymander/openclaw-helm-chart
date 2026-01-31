@@ -1,0 +1,280 @@
+# Default values for openclaw
+# This is a YAML-formatted file.
+
+# Image configuration
+image:
+  repository: openclaw/openclaw
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Image pull secrets (optional)
+imagePullSecrets: []
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+# Replica count for StatefulSet
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 18789
+  targetPort: 18789
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: openclaw.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Persistent volume configuration
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# Environment variables configuration
+# SECURITY WARNING: Never put API keys, passwords, or other sensitive data in this file!
+# Use Kubernetes Secrets instead. See README.md for secure configuration options.
+env:
+  # LLM/API Configuration
+  # ANTHROPIC_API_KEY should be provided via existingSecret or envFromSecret (see below)
+  # Model settings
+  CLAUDE_MODEL: "claude-3-5-sonnet-20241022"
+  # Service configuration
+  PORT: "18789"
+  HOST: "0.0.0.0"
+  # Logging
+  LOG_LEVEL: "info"
+  # Storage/persistence
+  DATA_DIR: "/data"
+  # Memory/session persistence
+  MEMORY_ENABLED: "true"
+  # Integration settings (email, messaging platforms)
+  # Add specific integration env vars as needed
+  # Example: TELEGRAM_BOT_TOKEN: ""
+  # Example: EMAIL_SMTP_HOST: ""
+  # Example: EMAIL_SMTP_PORT: "587"
+  
+# Extra environment variables for future extensibility
+extraEnv: []
+  # Example:
+  # - name: CUSTOM_VAR
+  #   value: "custom-value"
+  # - name: SECRET_VAR
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: secret-key
+
+# Environment variables from ConfigMap
+envFromConfigMap: []
+  # Example:
+  # - configMapRef:
+  #     name: my-configmap
+
+# Environment variables from Secrets
+envFromSecret: []
+  # Example:
+  # - secretRef:
+  #     name: my-secret
+
+# Existing Secret configuration (RECOMMENDED for production)
+# Use this to reference a pre-created Kubernetes Secret instead of storing secrets in values.yaml
+# Create the secret first: kubectl create secret generic openclaw-secrets --from-literal=ANTHROPIC_API_KEY=your-key
+existingSecret:
+  enabled: false
+  name: ""
+  # Keys to load from the existing secret
+  keys: []
+    # Example:
+    # - name: ANTHROPIC_API_KEY
+    #   key: ANTHROPIC_API_KEY  # key name in the secret
+
+# ConfigMap data (non-sensitive configuration)
+configMap:
+  enabled: true
+  data: {}
+    # Example:
+    # config.yaml: |
+    #   key: value
+
+# Secret data (sensitive configuration)
+# WARNING: Only use this for development/testing. For production, use existingSecret instead.
+# If you must use this, provide base64-encoded values:
+#   echo -n "your-api-key" | base64
+secret:
+  enabled: false  # Disabled by default - use existingSecret for production
+  data: {}
+    # Example (NOT RECOMMENDED for production):
+    # ANTHROPIC_API_KEY: <base64-encoded-value>
+
+# Extra volumes
+extraVolumes: []
+  # Example:
+  # - name: extra-storage
+  #   persistentVolumeClaim:
+  #     claimName: my-pvc
+
+# Extra volume mounts
+extraVolumeMounts: []
+  # Example:
+  # - name: extra-storage
+  #   mountPath: /extra
+
+# Extra command arguments
+extraArgs: []
+  # Example:
+  # - --custom-flag
+  # - --another-flag=value
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Liveness probe
+# Using TCP socket check since OpenClaw doesn't expose HTTP health endpoints
+livenessProbe:
+  enabled: true
+  tcpSocket:
+    port: 18789
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe
+# Using TCP socket check since OpenClaw doesn't expose HTTP health endpoints
+readinessProbe:
+  enabled: true
+  tcpSocket:
+    port: 18789
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# RBAC configuration
+rbac:
+  create: true
+  rules: []
+    # Example:
+    # - apiGroups: [""]
+    #   resources: ["pods"]
+    #   verbs: ["get", "list"]
+
+# Network policy
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  
+  # Ingress rules - who can connect to OpenClaw
+  ingress: []
+    # Example: Allow traffic from same namespace (use allowSameNamespace: true instead)
+    # - from:
+    #     - namespaceSelector:
+    #         matchLabels:
+    #           name: my-namespace
+    #   ports:
+    #     - protocol: TCP
+    #       port: 18789
+  
+  # Egress rules - where OpenClaw can connect to
+  egress: []
+    # Example: Allow DNS resolution
+    # - to:
+    #     - namespaceSelector:
+    #         matchLabels:
+    #           name: kube-system
+    #   ports:
+    #     - protocol: UDP
+    #       port: 53
+    #     - protocol: TCP
+    #       port: 53
+  
+  # Common egress rules (can be enabled individually)
+  allowDNS: true  # Allow DNS resolution (UDP/TCP port 53)
+  allowSameNamespace: false  # Allow traffic to/from same namespace
+  allowKubeSystem: false  # Allow traffic to kube-system namespace (for metrics, etc.)
+  
+  # Additional allowed namespaces (by label selector)
+  allowedNamespaces: []
+    # Example:
+    # - matchLabels:
+    #     name: monitoring
+  
+  # Additional allowed pods (by label selector)
+  allowedPods: []
+    # Example:
+    # - namespaceSelector:
+    #     matchLabels:
+    #       name: monitoring
+    #   podSelector:
+    #     matchLabels:
+    #       app: prometheus
+  
+  # Custom egress ports (in addition to DNS if allowDNS is true)
+  customEgressPorts: []
+    # Example:
+    # - protocol: TCP
+    #   port: 443  # HTTPS
+    # - protocol: TCP
+    #   port: 80   # HTTP
+
+# StatefulSet update strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    partition: 0
+
+# Pod management policy
+podManagementPolicy: OrderedReady

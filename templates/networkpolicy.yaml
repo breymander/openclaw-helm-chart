@@ -1,0 +1,75 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  {{- if or .Values.networkPolicy.ingress .Values.networkPolicy.allowSameNamespace }}
+  ingress:
+    {{- if .Values.networkPolicy.allowSameNamespace }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ .Release.Namespace }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.port }}
+    {{- end }}
+    {{- if .Values.networkPolicy.ingress }}
+    {{- toYaml .Values.networkPolicy.ingress | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if or .Values.networkPolicy.egress .Values.networkPolicy.allowDNS .Values.networkPolicy.allowKubeSystem .Values.networkPolicy.allowSameNamespace .Values.networkPolicy.allowedNamespaces .Values.networkPolicy.allowedPods .Values.networkPolicy.customEgressPorts }}
+  egress:
+    {{- if .Values.networkPolicy.allowDNS }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    {{- if .Values.networkPolicy.allowKubeSystem }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+    {{- if .Values.networkPolicy.allowSameNamespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ .Release.Namespace }}
+    {{- end }}
+    {{- range .Values.networkPolicy.allowedNamespaces }}
+    - to:
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+    {{- end }}
+    {{- range .Values.networkPolicy.allowedPods }}
+    - {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.networkPolicy.customEgressPorts }}
+    - ports:
+        {{- range .Values.networkPolicy.customEgressPorts }}
+        - {{- toYaml . | nindent 8 }}
+        {{- end }}
+    {{- end }}
+    {{- if .Values.networkPolicy.egress }}
+    {{- toYaml .Values.networkPolicy.egress | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

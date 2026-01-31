@@ -1,0 +1,35 @@
+# Helm
+Chart.lock
+charts/
+*.tgz
+.helm/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Secrets
+secrets.yaml
+*-secrets.yaml
+
+# Local test files
+test/
+*.test.yaml

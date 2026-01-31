@@ -184,6 +184,9 @@ envFromSecret:
 | `replicaCount` | Number of replicas | `1` |
 | `updateStrategy.type` | Update strategy | `RollingUpdate` |
 | `podManagementPolicy` | Pod management policy | `OrderedReady` |
+| `replicaOverrides` | Per-replica configuration overrides | `{}` |
+
+**Per-Replica Configuration**: When `replicaCount > 1`, you can configure different settings for each replica using `replicaOverrides`. Replica indices are 0-based (0 = first replica, 1 = second replica, etc.). Each replica will have access to a `STATEFULSET_REPLICA_INDEX` environment variable containing its index.
 
 ### Health Checks
 
@@ -356,6 +359,39 @@ existingSecret:
     - name: TELEGRAM_BOT_TOKEN
       key: TELEGRAM_BOT_TOKEN
 ```
+
+### With Per-Replica Configuration
+
+When running multiple replicas, you can configure different settings for each replica:
+
+```yaml
+replicaCount: 3
+
+replicaOverrides:
+  # Configure replica 0 (first replica) as primary
+  "0":
+    env:
+      REPLICA_ROLE: "primary"
+      REPLICA_PRIORITY: "high"
+  
+  # Configure replica 1 (second replica) with different resources
+  "1":
+    env:
+      REPLICA_ROLE: "secondary"
+      CUSTOM_VAR: "replica-1-value"
+    # Note: Resources, nodeSelector, tolerations, and affinity cannot be
+    # different per replica in a single StatefulSet. For those, consider
+    # using multiple StatefulSets or the application can use STATEFULSET_REPLICA_INDEX
+    # to apply different logic internally.
+  
+  # Configure replica 2 (third replica)
+  "2":
+    env:
+      REPLICA_ROLE: "secondary"
+      CUSTOM_VAR: "replica-2-value"
+```
+
+**Note**: Each pod will have a `STATEFULSET_REPLICA_INDEX` environment variable (0, 1, 2, etc.) that your application can use to determine which replica it is and apply different logic accordingly. Per-replica ConfigMaps are automatically created and loaded via `envFrom`.
 
 ## Security Considerations
 

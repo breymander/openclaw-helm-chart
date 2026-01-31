@@ -33,6 +33,24 @@ securityContext:
 # Replica count for StatefulSet
 replicaCount: 1
 
+# Per-replica configuration overrides
+# When replicaCount > 1, you can configure different environment variables for each replica
+# Replica indices are 0-based (0 = first replica, 1 = second replica, etc.)
+# Each replica will have STATEFULSET_REPLICA_INDEX env var set to its index
+# NOTE: Resources, nodeSelector, tolerations, and affinity cannot be different per replica
+#       in a single StatefulSet. For those, use multiple StatefulSets or handle in application.
+replicaOverrides: {}
+  # Example: Configure different env vars for replica 0 (first replica)
+  # "0":
+  #   env:
+  #     REPLICA_ROLE: "primary"
+  #     REPLICA_PRIORITY: "high"
+  # Example: Configure different env vars for replica 1 (second replica)
+  # "1":
+  #   env:
+  #     REPLICA_ROLE: "secondary"
+  #     CUSTOM_VAR: "replica-1-value"
+
 # Service configuration
 service:
   type: ClusterIP

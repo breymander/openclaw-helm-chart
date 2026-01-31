@@ -107,3 +107,76 @@ Excludes any keys that are provided via existingSecret or secret
 {{- toYaml .Values.extraEnv }}
 {{- end }}
 {{- end }}
+
+{{/*
+Get replica-specific resources
+Merges default resources with replica-specific overrides
+*/}}
+{{- define "openclaw.replicaResources" -}}
+{{- $replicaIndex := .replicaIndex | default "0" | toString }}
+{{- $defaultResources := .Values.resources }}
+{{- $replicaOverride := index .Values.replicaOverrides $replicaIndex }}
+{{- if $replicaOverride.resources }}
+{{- toYaml $replicaOverride.resources }}
+{{- else }}
+{{- toYaml $defaultResources }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get replica-specific environment variables
+Merges default env vars with replica-specific overrides
+*/}}
+{{- define "openclaw.replicaEnvVars" -}}
+{{- $replicaIndex := .replicaIndex | default "0" | toString }}
+{{- $replicaOverride := index .Values.replicaOverrides $replicaIndex }}
+{{- if $replicaOverride.env }}
+{{- range $key, $value := $replicaOverride.env }}
+- name: {{ $key }}
+  value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get replica-specific node selector
+Merges default nodeSelector with replica-specific overrides
+*/}}
+{{- define "openclaw.replicaNodeSelector" -}}
+{{- $replicaIndex := .replicaIndex | default "0" | toString }}
+{{- $defaultSelector := .Values.nodeSelector }}
+{{- $replicaOverride := index .Values.replicaOverrides $replicaIndex }}
+{{- if $replicaOverride.nodeSelector }}
+{{- toYaml $replicaOverride.nodeSelector }}
+{{- else if $defaultSelector }}
+{{- toYaml $defaultSelector }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get replica-specific tolerations
+*/}}
+{{- define "openclaw.replicaTolerations" -}}
+{{- $replicaIndex := .replicaIndex | default "0" | toString }}
+{{- $defaultTolerations := .Values.tolerations }}
+{{- $replicaOverride := index .Values.replicaOverrides $replicaIndex }}
+{{- if $replicaOverride.tolerations }}
+{{- toYaml $replicaOverride.tolerations }}
+{{- else if $defaultTolerations }}
+{{- toYaml $defaultTolerations }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get replica-specific affinity
+*/}}
+{{- define "openclaw.replicaAffinity" -}}
+{{- $replicaIndex := .replicaIndex | default "0" | toString }}
+{{- $defaultAffinity := .Values.affinity }}
+{{- $replicaOverride := index .Values.replicaOverrides $replicaIndex }}
+{{- if $replicaOverride.affinity }}
+{{- toYaml $replicaOverride.affinity }}
+{{- else if $defaultAffinity }}
+{{- toYaml $defaultAffinity }}
+{{- end }}
+{{- end }}

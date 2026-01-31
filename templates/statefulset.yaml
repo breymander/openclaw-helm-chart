@@ -43,15 +43,35 @@ spec:
           containerPort: {{ .Values.service.port }}
           protocol: TCP
         env:
+        # Add replica index from StatefulSet pod name (extracts ordinal: name-0 -> 0, name-1 -> 1, etc.)
+        - name: STATEFULSET_REPLICA_INDEX
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        # Helper: Full pod name for applications that need it
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         {{- include "openclaw.envVars" . | nindent 8 }}
-        {{- if .Values.envFromConfigMap }}
+        {{- if or .Values.envFromConfigMap .Values.replicaOverrides }}
         envFrom:
         {{- range .Values.envFromConfigMap }}
         - {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- if .Values.replicaOverrides }}
+        # Load per-replica ConfigMaps - application uses STATEFULSET_REPLICA_INDEX to select config
+        {{- range $replicaIndex, $override := .Values.replicaOverrides }}
+        {{- if $override.env }}
+        - configMapRef:
+            name: {{ include "openclaw.fullname" $ }}-replica-{{ $replicaIndex }}-config
+            optional: true
+        {{- end }}
+        {{- end }}
+        {{- end }}
         {{- end }}
         {{- if .Values.envFromSecret }}
-        {{- if not .Values.envFromConfigMap }}
+        {{- if not (or .Values.envFromConfigMap .Values.replicaOverrides) }}
         envFrom:
         {{- end }}
         {{- range .Values.envFromSecret }}

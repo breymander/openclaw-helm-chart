@@ -1,0 +1,16 @@
+{{- range $replicaIndex, $override := .Values.replicaOverrides }}
+{{- if $override.env }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openclaw.fullname" $ }}-replica-{{ $replicaIndex }}-config
+  labels:
+    {{- include "openclaw.labels" $ | nindent 4 }}
+    openclaw.io/replica-index: {{ $replicaIndex | quote }}
+data:
+  {{- range $key, $value := $override.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}

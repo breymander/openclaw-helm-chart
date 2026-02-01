@@ -3,9 +3,9 @@ entries:
   openclaw:
   - apiVersion: v2
     appVersion: latest
-    created: "2026-02-01T20:42:15.704719729Z"
+    created: "2026-02-01T21:00:55.072113046Z"
     description: A Helm chart for OpenClaw - an open-source personal AI assistant
-    digest: 9302aab26c4467dcc2807eb7d0a7ae43930fb92429f73de75b2f25dfad62f534
+    digest: 205ff5cdd438ca19889e3505d207305e996d638144c607b9399bfabee33fbfa3
     home: https://github.com/breymander/openclaw-helm-chart
     keywords:
     - openclaw
@@ -22,4 +22,25 @@ entries:
     urls:
     - https://github.com/breymander/openclaw-helm-chart/releases/download/openclaw-0.1.0/openclaw-0.1.0.tgz
     version: 0.1.0
-generated: "2026-02-01T20:42:15.704729337Z"
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-02-01T21:00:55.072850958Z"
+    description: A Helm chart for OpenClaw - an open-source personal AI assistant
+    digest: 205ff5cdd438ca19889e3505d207305e996d638144c607b9399bfabee33fbfa3
+    home: https://github.com/breymander/openclaw-helm-chart
+    keywords:
+    - openclaw
+    - ai
+    - assistant
+    - claude
+    maintainers:
+    - name: OpenClaw Community
+    name: openclaw
+    sources:
+    - https://github.com/breymander/openclaw-helm-chart
+    - https://github.com/openclaw/openclaw
+    type: application
+    urls:
+    - https://github.com/breymander/openclaw-helm-chart/releases/download/openclaw-0.1.0/openclaw-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-02-01T21:00:55.07117403Z"

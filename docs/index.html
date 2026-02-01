@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Helm Chart Repository</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 {
+            color: #0366d6;
+            border-bottom: 2px solid #e1e4e8;
+            padding-bottom: 10px;
+        }
+        .info {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            overflow-x: auto;
+        }
+        .chart-info {
+            margin: 20px 0;
+        }
+        .chart-info h2 {
+            color: #24292e;
+            margin-top: 30px;
+        }
+        a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenClaw Helm Chart Repository</h1>
+    
+    <div class="info">
+        <p><strong>Repository URL:</strong> <code>https://breymander.github.io/openclaw-helm-chart</code></p>
+        <p>This is a Helm chart repository for deploying <a href="https://github.com/openclaw/openclaw">OpenClaw</a>, an open-source personal AI assistant powered by Anthropic's Claude LLM.</p>
+    </div>
+
+    <div class="chart-info">
+        <h2>Installation</h2>
+        <p>Add this repository to Helm:</p>
+        <pre>helm repo add openclaw https://breymander.github.io/openclaw-helm-chart
+helm repo update</pre>
+
+        <p>Install the chart:</p>
+        <pre>helm install my-openclaw openclaw/openclaw</pre>
+    </div>
+
+    <div class="chart-info">
+        <h2>Available Charts</h2>
+        <p>View the <a href="index.yaml">repository index</a> for available chart versions.</p>
+        <p>For detailed documentation, see the <a href="https://github.com/breymander/openclaw-helm-chart">GitHub repository</a>.</p>
+    </div>
+
+    <div class="chart-info">
+        <h2>Resources</h2>
+        <ul>
+            <li><a href="https://github.com/breymander/openclaw-helm-chart">Helm Chart Repository</a></li>
+            <li><a href="https://github.com/openclaw/openclaw">OpenClaw Project</a></li>
+            <li><a href="https://helm.sh/docs/">Helm Documentation</a></li>
+        </ul>
+    </div>
+
+    <div class="info" style="margin-top: 40px; font-size: 0.9em; color: #586069;">
+        <p><strong>Note:</strong> This repository uses <code>index.yaml</code> for Helm chart discovery. The HTML page is for human reference only.</p>
+    </div>
+</body>
+</html>

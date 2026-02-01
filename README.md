@@ -177,7 +177,7 @@ envFromSecret:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). When true, the chart injects `gateway.controlUi.allowInsecureAuth` into `~/.openclaw/openclaw.json` (OpenClaw reads this from config file). | `true` |
+| `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). With persistence: merged into `/data/.openclaw/openclaw.json` (does not overwrite). Without persistence: ephemeral config at `~/.openclaw/openclaw.json`. | `true` |
 
 ### Security Configuration
 

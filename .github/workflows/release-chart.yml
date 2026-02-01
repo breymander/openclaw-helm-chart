@@ -88,24 +88,35 @@ jobs:
           helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
           
           # Replace all URLs with GitHub Release URL
-          # Use awk to replace URLs in the urls: section
+          # Use awk with flexible pattern matching to handle various indentation
           awk -v url="${RELEASE_URL}" '
-            /^  urls:/ { 
+            /urls:/ { 
               in_urls=1
               print
               next
             }
-            in_urls && /^    -/ {
-              # Always replace with the release URL (removes any existing URL, filename, or path)
-              print "    - \"" url "\""
+            in_urls && /^[[:space:]]+-/ {
+              # Match any line starting with spaces and a dash after urls:
+              # Extract the indentation and replace the entire line
+              match($0, /^[[:space:]]+/)
+              indent = substr($0, 1, RLENGTH)
+              print indent "- \"" url "\""
               in_urls=0
               next
             }
-            in_urls && /^  [a-zA-Z]/ {
+            in_urls && /^[[:space:]]*[a-zA-Z]/ && !/^[[:space:]]+-/ {
+              # End of urls section (next key that is not a list item)
               in_urls=0
             }
             { print }
           ' index.yaml > index.yaml.tmp && mv index.yaml.tmp index.yaml
+          
+          # Verify the replacement worked
+          if ! grep -q "releases/download" index.yaml; then
+            echo "ERROR: URL replacement failed. Current index.yaml content:"
+            cat index.yaml
+            exit 1
+          fi
           cd ..
           
           # Copy index.html from source docs/ directory if it exists

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - dev
     paths:
       - 'Chart.yaml'
       - 'values.yaml'
@@ -12,6 +13,15 @@ on:
       - '.github/workflows/release-chart.yml'
       - '.helmignore'
   workflow_dispatch:
+    inputs:
+      dev_release:
+        description: 'Force dev-style release (version suffix -dev.N, prerelease)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  IS_DEV: ${{ github.ref == 'refs/heads/dev' || github.event.inputs.dev_release == 'true' }}
 
 jobs:
   release:
@@ -42,30 +52,39 @@ jobs:
         run: |
           CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}' | tr -d '"')
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}' | tr -d '"')
-          PACKAGE_FILE="${CHART_NAME}-${CHART_VERSION}.tgz"
           
-          helm package . --destination /tmp
+          if [ "${{ env.IS_DEV }}" = "true" ]; then
+            PACKAGE_VERSION="${CHART_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+            helm package . --version "${PACKAGE_VERSION}" --destination /tmp
+          else
+            PACKAGE_VERSION="${CHART_VERSION}"
+            helm package . --destination /tmp
+          fi
+          
+          PACKAGE_FILE="${CHART_NAME}-${PACKAGE_VERSION}.tgz"
           echo "package_file=${PACKAGE_FILE}" >> $GITHUB_OUTPUT
-          echo "chart_version=${CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "chart_version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
           echo "chart_name=${CHART_NAME}" >> $GITHUB_OUTPUT
+          echo "is_dev=${{ env.IS_DEV }}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: /tmp/${{ steps.package.outputs.package_file }}
           tag_name: openclaw-${{ steps.package.outputs.chart_version }}
-          name: Release ${{ steps.package.outputs.chart_version }}
+          name: ${{ steps.package.outputs.is_dev == 'true' && format('Dev release {0}', steps.package.outputs.chart_version) || format('Release {0}', steps.package.outputs.chart_version) }}
           body: |
+            ${{ steps.package.outputs.is_dev == 'true' && '**Dev build** – use for testing only.' || '' }}
             Helm chart release for version ${{ steps.package.outputs.chart_version }}
             
             **Installation:**
             ```bash
             helm repo add openclaw https://breymander.github.io/openclaw-helm-chart
             helm repo update
-            helm install my-openclaw openclaw/openclaw
+            helm install my-openclaw openclaw/openclaw${{ steps.package.outputs.is_dev == 'true' && format(' --version {0}', steps.package.outputs.chart_version) || '' }}
             ```
           draft: false
-          prerelease: false
+          prerelease: ${{ env.IS_DEV }}
 
       - name: Update index.yaml and index.html
         run: |
@@ -141,14 +160,23 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Chart Released Successfully 🎉" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The Helm chart has been packaged and released." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.package.outputs.is_dev }}" = "true" ]; then
+            echo "## Dev Chart Released 🧪" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The Helm chart has been packaged and released as **${{ steps.package.outputs.chart_version }}** (prerelease)." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Chart Released Successfully 🎉" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The Helm chart has been packaged and released." >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Installation:**" >> $GITHUB_STEP_SUMMARY
-          echo "Add the repository:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "helm repo add openclaw https://breymander.github.io/openclaw-helm-chart" >> $GITHUB_STEP_SUMMARY
           echo "helm repo update" >> $GITHUB_STEP_SUMMARY
-          echo "helm install my-openclaw openclaw/openclaw" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.package.outputs.is_dev }}" = "true" ]; then
+            echo "helm install my-openclaw openclaw/openclaw --version ${{ steps.package.outputs.chart_version }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "helm install my-openclaw openclaw/openclaw" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

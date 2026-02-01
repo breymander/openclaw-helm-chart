@@ -42,6 +42,7 @@
 {{- end }}
 
 6. For more information, visit:
+   - Helm Chart: https://github.com/breymander/openclaw-helm-chart
    - OpenClaw GitHub: https://github.com/openclaw/openclaw
    - Chart README: See README.md for detailed configuration options
 

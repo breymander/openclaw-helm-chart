@@ -79,8 +79,12 @@ jobs:
           git fetch origin gh-pages:gh-pages 2>/dev/null || true
           git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
           
-          # Copy package and generate index
-          cp /tmp/${PACKAGE_FILE} .
+          # Create docs/ directory if it doesn't exist
+          mkdir -p docs
+          
+          # Copy package to docs/ and generate index
+          cp /tmp/${PACKAGE_FILE} docs/
+          cd docs
           helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
           
           # Replace all URLs with GitHub Release URL
@@ -90,18 +94,19 @@ jobs:
             in_urls && /^  [a-zA-Z]/ { in_urls=0 }
             { print }
           ' index.yaml > index.yaml.tmp && mv index.yaml.tmp index.yaml
+          cd ..
           
-          # Copy index.html from docs/ directory if it exists
+          # Copy index.html from source docs/ directory if it exists
           if [ -f ../docs/index.html ]; then
-            cp ../docs/index.html .
-            git add index.html
+            cp ../docs/index.html docs/
+            git add docs/index.html
           fi
           
           # Add .nojekyll to prevent GitHub Pages from processing files
           touch .nojekyll
           
           # Commit and push (using [skip ci] to avoid triggering other workflows)
-          git add index.yaml .nojekyll
+          git add docs/index.yaml .nojekyll
           git commit -m "Update index.yaml and index.html for ${CHART_VERSION} [skip ci]" || true
           git push origin gh-pages || true
 

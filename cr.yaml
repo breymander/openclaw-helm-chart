@@ -1,0 +1,21 @@
+# Chart Releaser configuration
+# See: https://github.com/helm/chart-releaser-action
+
+# GitHub repository owner
+owner: breymander
+
+# GitHub repository name
+git-repo: openclaw-helm-chart
+
+# Chart name (from Chart.yaml)
+chart-name: openclaw
+
+# Package charts and create GitHub releases
+# Charts are stored as release assets, not in the repository
+package: true
+
+# Publish index to gh-pages branch
+publish: true
+
+# GitHub Pages URL
+pages-index-path: index.yaml

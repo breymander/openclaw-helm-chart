@@ -4,10 +4,9 @@ charts/
 *.tgz
 .helm/
 
-# Keep docs/ directory for GitHub Pages (but ignore root-level .tgz)
-!docs/*.tgz
-!docs/index.yaml
-!docs/index.html
+# Chart Releaser creates gh-pages branch, no need to track docs/ anymore
+# (charts are stored as GitHub Release assets, not in the repo)
+docs/
 
 # Environment files
 .env

@@ -161,6 +161,11 @@
               "default": true
             }
           }
+        },
+        "initImage": {
+          "type": "string",
+          "description": "Init container image; must have sh and jq (merge/create JSON). Default: imega/jq.",
+          "default": "imega/jq:1.6"
         }
       }
     },

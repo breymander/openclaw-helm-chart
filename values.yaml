@@ -114,11 +114,13 @@ extraEnv: []
 
 # Gateway Control UI settings
 # allowInsecureAuth: when true, sets gateway.controlUi.allowInsecureAuth (token-in-URL auth for Control UI).
-# With persistence enabled: init container merges this into /data/.openclaw/openclaw.json (does not overwrite).
+# With persistence enabled: init container merges this into /data/.openclaw/openclaw.json (creates if missing).
 # With persistence disabled: ephemeral config is provided at ~/.openclaw/openclaw.json.
 gateway:
   controlUi:
     allowInsecureAuth: true
+  # Init container image; must have sh and jq (merge/create JSON). Default: imega/jq (Alpine + jq).
+  initImage: "imega/jq:1.6"
 
 # Environment variables from ConfigMap
 envFromConfigMap: []

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - dev
     paths:
       - 'Chart.yaml'
       - 'values.yaml'
@@ -12,10 +13,32 @@ on:
       - '.github/workflows/release-chart.yml'
       - '.helmignore'
   workflow_dispatch:
+    inputs:
+      dev_release:
+        description: 'Force dev-style release (version suffix -dev, prerelease)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  release:
+  vars:
     runs-on: ubuntu-latest
+    outputs:
+      is_dev: ${{ steps.set.outputs.is_dev }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/dev" ] || [ "${{ github.event.inputs.dev_release }}" = "true" ]; then
+            echo "is_dev=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_dev=false" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: vars
+    runs-on: ubuntu-latest
+    env:
+      IS_DEV: ${{ needs.vars.outputs.is_dev }}
     permissions:
       contents: write
       pages: write
@@ -42,113 +65,143 @@ jobs:
         run: |
           CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}' | tr -d '"')
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}' | tr -d '"')
-          PACKAGE_FILE="${CHART_NAME}-${CHART_VERSION}.tgz"
           
-          helm package . --destination /tmp
+          if [ "${{ env.IS_DEV }}" = "true" ]; then
+            PACKAGE_VERSION="${CHART_VERSION}-dev"
+            helm package . --version "${PACKAGE_VERSION}" --destination /tmp
+          else
+            PACKAGE_VERSION="${CHART_VERSION}"
+            helm package . --destination /tmp
+          fi
+          
+          PACKAGE_FILE="${CHART_NAME}-${PACKAGE_VERSION}.tgz"
           echo "package_file=${PACKAGE_FILE}" >> $GITHUB_OUTPUT
-          echo "chart_version=${CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "chart_version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
           echo "chart_name=${CHART_NAME}" >> $GITHUB_OUTPUT
+          echo "is_dev=${{ env.IS_DEV }}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: /tmp/${{ steps.package.outputs.package_file }}
           tag_name: openclaw-${{ steps.package.outputs.chart_version }}
-          name: Release ${{ steps.package.outputs.chart_version }}
+          name: ${{ steps.package.outputs.is_dev == 'true' && format('Dev release {0}', steps.package.outputs.chart_version) || format('Release {0}', steps.package.outputs.chart_version) }}
           body: |
+            ${{ steps.package.outputs.is_dev == 'true' && '**Dev build** – use for testing only.' || '' }}
             Helm chart release for version ${{ steps.package.outputs.chart_version }}
             
             **Installation:**
             ```bash
             helm repo add openclaw https://breymander.github.io/openclaw-helm-chart
             helm repo update
-            helm install my-openclaw openclaw/openclaw
+            helm install my-openclaw openclaw/openclaw${{ steps.package.outputs.is_dev == 'true' && format(' --version {0}', steps.package.outputs.chart_version) || '' }}
             ```
           draft: false
-          prerelease: false
+          prerelease: ${{ env.IS_DEV }}
+          replace: ${{ env.IS_DEV }}
 
       - name: Update index.yaml and index.html
+        env:
+          GH_REPO: breymander/openclaw-helm-chart
+          CHART_NAME: ${{ steps.package.outputs.chart_name }}
+          CURRENT_VERSION: ${{ steps.package.outputs.chart_version }}
+          CURRENT_PACKAGE: ${{ steps.package.outputs.package_file }}
+          BASE_URL: https://github.com/breymander/openclaw-helm-chart/releases/download
         run: |
-          CHART_VERSION="${{ steps.package.outputs.chart_version }}"
-          CHART_NAME="${{ steps.package.outputs.chart_name }}"
-          PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
-          RELEASE_TAG="openclaw-${CHART_VERSION}"
-          RELEASE_URL="https://github.com/breymander/openclaw-helm-chart/releases/download/${RELEASE_TAG}/${PACKAGE_FILE}"
+          set -e
+          ENTRIES_FILE="/tmp/entries.jsonl"
+          : > "${ENTRIES_FILE}"
           
-          # Checkout gh-pages branch
-          git fetch origin gh-pages:gh-pages 2>/dev/null || true
-          git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
+          # Collect .tgz asset metadata from all releases via API (no downloads)
+          page=1
+          while true; do
+            resp=$(curl -sS -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${GH_REPO}/releases?per_page=100&page=${page}")
+            count=$(echo "${resp}" | jq 'length')
+            [ "${count}" -eq 0 ] && break
+            echo "${resp}" | jq -r -c --arg chart "${CHART_NAME}" '.[] | select(.draft == false) | . as $rel | .assets[] | select(.name | endswith(".tgz")) | {version: (.name | sub("\\.tgz$"; "") | sub("^" + $chart + "-"; "")), url: .browser_download_url, created: $rel.published_at}' >> "${ENTRIES_FILE}"
+            [ "${count}" -lt 100 ] && break
+            page=$((page + 1))
+          done
           
-          # Create docs/ directory if it doesn't exist
-          mkdir -p docs
+          # Add current build (API may be briefly stale)
+          echo "{\"version\":\"${CURRENT_VERSION}\",\"url\":\"${BASE_URL}/openclaw-${CURRENT_VERSION}/${CURRENT_PACKAGE}\",\"created\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> "${ENTRIES_FILE}"
           
-          # Copy package to docs/ and generate index
-          cp /tmp/${PACKAGE_FILE} docs/
-          cd docs
-          helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
+          # Build index.yaml from metadata (sort by version, dedupe) with full static metadata per entry
+          {
+            echo "apiVersion: v1"
+            echo "entries:"
+            echo "  ${CHART_NAME}:"
+            jq -r -n '[inputs] | sort_by(.version) | unique_by(.version) | .[] | @json' < "${ENTRIES_FILE}" | while read -r line; do
+              version=$(echo "${line}" | jq -r '.version')
+              url=$(echo "${line}" | jq -r '.url')
+              created=$(echo "${line}" | jq -r 'if .created then .created else (now | strftime("%Y-%m-%dT%H:%M:%SZ")) end')
+              cat << ENTRY
+  - apiVersion: v2
+    appVersion: latest
+    created: "${created}"
+    description: A Helm chart for OpenClaw - an open-source personal AI assistant
+    home: https://github.com/breymander/openclaw-helm-chart
+    keywords:
+    - openclaw
+    - ai
+    - assistant
+    - claude
+    maintainers:
+    - name: OpenClaw Community
+    name: ${CHART_NAME}
+    sources:
+    - https://github.com/breymander/openclaw-helm-chart
+    - https://github.com/openclaw/openclaw
+    type: application
+    urls:
+    - "${url}"
+    version: "${version}"
+ENTRY
+            done
+            echo "generated: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
+          } > /tmp/index.yaml
           
-          # Replace all URLs with GitHub Release URL
-          # Use awk with flexible pattern matching to handle various indentation
-          awk -v url="${RELEASE_URL}" '
-            /urls:/ { 
-              in_urls=1
-              print
-              next
-            }
-            in_urls && /^[[:space:]]+-/ {
-              # Match any line starting with spaces and a dash after urls:
-              # Extract the indentation and replace the entire line
-              match($0, /^[[:space:]]+/)
-              indent = substr($0, 1, RLENGTH)
-              print indent "- \"" url "\""
-              in_urls=0
-              next
-            }
-            in_urls && /^[[:space:]]*[a-zA-Z]/ && !/^[[:space:]]+-/ {
-              # End of urls section (next key that is not a list item)
-              in_urls=0
-            }
-            { print }
-          ' index.yaml > index.yaml.tmp && mv index.yaml.tmp index.yaml
-          
-          # Verify the replacement worked
-          if ! grep -q "releases/download" index.yaml; then
-            echo "ERROR: URL replacement failed. Current index.yaml content:"
-            cat index.yaml
+          if ! grep -q "releases/download" /tmp/index.yaml; then
+            echo "ERROR: No release URLs in index.yaml"
+            cat /tmp/index.yaml
             exit 1
           fi
-          cd ..
           
-          # Copy index.html from source docs/ directory if it exists
-          if [ -f ../docs/index.html ]; then
-            cp ../docs/index.html docs/
-          fi
+          # Checkout gh-pages and update index
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
+          mkdir -p docs
+          cp /tmp/index.yaml docs/
           
-          # Add .nojekyll to prevent GitHub Pages from processing files
           touch .nojekyll
           
-          # Force add files in docs/ directory (they're ignored by .gitignore in main branch)
-          # but we need them tracked in gh-pages branch
           git add -f docs/index.yaml
-          if [ -f docs/index.html ]; then
-            git add -f docs/index.html
-          fi
+          [ -f docs/index.html ] && git add -f docs/index.html
           git add .nojekyll
-          
-          # Commit and push (using [skip ci] to avoid triggering other workflows)
-          git commit -m "Update index.yaml and index.html for ${CHART_VERSION} [skip ci]" || true
+          git commit -m "Update index.yaml from releases [skip ci]" || true
           git push origin gh-pages || true
 
       - name: Summary
         run: |
-          echo "## Chart Released Successfully 🎉" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The Helm chart has been packaged and released." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.package.outputs.is_dev }}" = "true" ]; then
+            echo "## Dev Chart Released 🧪" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The Helm chart has been packaged and released as **${{ steps.package.outputs.chart_version }}** (prerelease)." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Chart Released Successfully 🎉" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The Helm chart has been packaged and released." >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Installation:**" >> $GITHUB_STEP_SUMMARY
-          echo "Add the repository:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "helm repo add openclaw https://breymander.github.io/openclaw-helm-chart" >> $GITHUB_STEP_SUMMARY
           echo "helm repo update" >> $GITHUB_STEP_SUMMARY
-          echo "helm install my-openclaw openclaw/openclaw" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.package.outputs.is_dev }}" = "true" ]; then
+            echo "helm install my-openclaw openclaw/openclaw --version ${{ steps.package.outputs.chart_version }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "helm install my-openclaw openclaw/openclaw" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

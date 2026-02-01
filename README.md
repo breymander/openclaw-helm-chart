@@ -177,7 +177,8 @@ envFromSecret:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). With persistence: merged into `/data/.openclaw/openclaw.json` (does not overwrite). Without persistence: ephemeral config at `~/.openclaw/openclaw.json`. | `true` |
+| `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). With persistence: init merges into `/data/.openclaw/openclaw.json` (creates if missing). Without persistence: ephemeral config at `~/.openclaw/openclaw.json`. | `true` |
+| `gateway.initImage` | Init container image; must have `sh` and `jq` (merge/create JSON). Default: `imega/jq:1.6`. | `imega/jq:1.6` |
 
 ### Security Configuration
 

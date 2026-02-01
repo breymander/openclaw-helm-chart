@@ -7,5 +7,5 @@ metadata:
     {{- include "openclaw.labels" . | nindent 4 }}
 data:
   openclaw.json: |
-    {"gateway":{"controlUi":{"allowInsecureAuth":true}},"agents":{"default":{"workspace":"/data"}}}
+    {"gateway":{"controlUi":{"allowInsecureAuth":true}}}
 {{- end }}

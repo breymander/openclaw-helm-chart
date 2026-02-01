@@ -83,7 +83,7 @@ persistence:
 # Use Kubernetes Secrets instead. See README.md for secure configuration options.
 env:
   # LLM/API Configuration
-  # ANTHROPIC_API_KEY should be provided via existingSecret or envFromSecret (see below)
+  # ANTHROPIC_API_KEY and OPENCLAW_GATEWAY_TOKEN should be provided via existingSecret (see below)
   # Model settings
   CLAUDE_MODEL: "claude-3-5-sonnet-20241022"
   # Service configuration
@@ -126,9 +126,14 @@ envFromSecret: []
 
 # Existing Secret configuration (RECOMMENDED for production)
 # Use this to reference a pre-created Kubernetes Secret instead of storing secrets in values.yaml
-# 
+#
+# Required for gateway auth: OPENCLAW_GATEWAY_TOKEN (used to authenticate to the gateway / Control UI).
+# Generate a random token, e.g.: openssl rand -hex 32
+#
 # Step 1: Create the secret first:
-#   kubectl create secret generic openclaw-secrets --from-literal=ANTHROPIC_API_KEY=your-api-key-here
+#   kubectl create secret generic openclaw-secrets \
+#     --from-literal=ANTHROPIC_API_KEY=your-api-key-here \
+#     --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 #
 # Step 2: Configure it below:
 existingSecret:
@@ -140,12 +145,14 @@ existingSecret:
   keys: {}
     # Example 1: Simple case (env var name = secret key name)
     # ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    # OPENCLAW_GATEWAY_TOKEN: OPENCLAW_GATEWAY_TOKEN  # gateway auth token (required)
     #
     # Example 2: Different env var name than secret key
     # API_KEY: ANTHROPIC_API_KEY  # env var will be API_KEY, loads from secret key ANTHROPIC_API_KEY
     #
     # Example 3: Multiple keys
     # ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    # OPENCLAW_GATEWAY_TOKEN: OPENCLAW_GATEWAY_TOKEN
     # TELEGRAM_BOT_TOKEN: TELEGRAM_BOT_TOKEN
 
 # ConfigMap data (non-sensitive configuration)
@@ -181,14 +188,18 @@ extraVolumeMounts: []
 
 # Container command (overrides image CMD). Default runs the gateway server.
 # The image runs a CLI; without this, it would show help and exit.
+# --allow-unconfigured lets the gateway start without running 'openclaw setup' first
+# (config can be provided via env/secrets or onboarding done separately).
+# --bind: use "lan" so the gateway is reachable in-cluster (valid: loopback, lan, tailnet, auto, custom).
 command:
   - "node"
   - "dist/index.js"
   - "gateway"
   - "--bind"
-  - "0.0.0.0"
+  - "lan"
   - "--port"
   - "18789"
+  - "--allow-unconfigured"
 
 # Extra command arguments (appended after the command above)
 extraArgs: []

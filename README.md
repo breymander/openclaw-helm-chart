@@ -31,15 +31,19 @@ helm repo update
 
 #### Option 1: Create Secret First (Recommended)
 
+The gateway requires **OPENCLAW_GATEWAY_TOKEN** (used to authenticate to the gateway / Control UI). Generate a random token, e.g. `openssl rand -hex 32`.
+
 ```bash
-# Step 1: Create a Kubernetes Secret with your API key
+# Step 1: Create a Kubernetes Secret (API key + gateway token)
 kubectl create secret generic openclaw-secrets \
-  --from-literal=ANTHROPIC_API_KEY=your-api-key-here
+  --from-literal=ANTHROPIC_API_KEY=your-api-key-here \
+  --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 
 # Step 2: Install the chart referencing the existing secret
 helm install my-openclaw ./openclaw \
   --set existingSecret.name=openclaw-secrets \
-  --set existingSecret.keys.ANTHROPIC_API_KEY=ANTHROPIC_API_KEY
+  --set existingSecret.keys.ANTHROPIC_API_KEY=ANTHROPIC_API_KEY \
+  --set existingSecret.keys.OPENCLAW_GATEWAY_TOKEN=OPENCLAW_GATEWAY_TOKEN
 ```
 
 Or use a values file:
@@ -48,14 +52,16 @@ existingSecret:
   name: openclaw-secrets
   keys:
     ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    OPENCLAW_GATEWAY_TOKEN: OPENCLAW_GATEWAY_TOKEN  # gateway auth token (required)
 ```
 
 #### Option 2: Use envFromSecret
 
 ```bash
-# Create a Kubernetes Secret
+# Create a Kubernetes Secret (include OPENCLAW_GATEWAY_TOKEN for gateway auth)
 kubectl create secret generic openclaw-secrets \
-  --from-literal=ANTHROPIC_API_KEY=your-api-key-here
+  --from-literal=ANTHROPIC_API_KEY=your-api-key-here \
+  --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 
 # Install with envFromSecret
 helm install my-openclaw ./openclaw \

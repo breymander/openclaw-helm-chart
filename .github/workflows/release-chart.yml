@@ -17,7 +17,7 @@ on:
       dev_release:
         description: 'Force dev-style release (version suffix -dev, prerelease)'
         required: false
-        default: false
+        default: "false"
         type: boolean
 
 jobs:

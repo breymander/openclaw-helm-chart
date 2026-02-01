@@ -179,7 +179,18 @@ extraVolumeMounts: []
   # - name: extra-storage
   #   mountPath: /extra
 
-# Extra command arguments
+# Container command (overrides image CMD). Default runs the gateway server.
+# The image runs a CLI; without this, it would show help and exit.
+command:
+  - "node"
+  - "dist/index.js"
+  - "gateway"
+  - "--bind"
+  - "0.0.0.0"
+  - "--port"
+  - "18789"
+
+# Extra command arguments (appended after the command above)
 extraArgs: []
   # Example:
   # - --custom-flag

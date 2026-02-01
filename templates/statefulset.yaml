@@ -95,6 +95,12 @@ spec:
               key: {{ $key }}
         {{- end }}
         {{- end }}
+        {{- if .Values.command }}
+        command:
+        {{- range .Values.command }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
         {{- if .Values.extraArgs }}
         args:
         {{- range .Values.extraArgs }}

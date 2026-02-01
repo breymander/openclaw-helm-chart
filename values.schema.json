@@ -138,6 +138,16 @@
       },
       "required": ["name"]
     },
+    "command": {
+      "type": "array",
+      "description": "Container command (overrides image CMD). Default runs the gateway server.",
+      "items": { "type": "string" }
+    },
+    "extraArgs": {
+      "type": "array",
+      "description": "Extra arguments appended to the container command",
+      "items": { "type": "string" }
+    },
     "extraEnv": {
       "type": "array",
       "description": "Additional environment variables",

@@ -10,6 +10,7 @@ on:
       - 'values.yaml'
       - 'templates/**'
       - '.github/workflows/release-chart.yml'
+      - '.helmignore'
   workflow_dispatch:
 
 jobs:
@@ -17,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -24,58 +27,51 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: 'latest'
-
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Package Helm chart
-        run: |
-          mkdir -p docs
-          helm package . --destination docs
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
 
-      - name: Generate index
+      - name: Verify .helmignore
         run: |
-          # Generate index, merging with existing if it exists (for multiple chart versions)
-          if [ -f docs/index.yaml ]; then
-            helm repo index docs --url https://breymander.github.io/openclaw-helm-chart --merge docs/index.yaml
-          else
-            helm repo index docs --url https://breymander.github.io/openclaw-helm-chart
+          if [ ! -f .helmignore ]; then
+            echo "Error: .helmignore file not found!"
+            exit 1
           fi
+          echo "✓ .helmignore file found"
+          echo "Checking for required exclusions:"
+          grep -q "^docs/" .helmignore && echo "  ✓ docs/ excluded" || echo "  ✗ docs/ NOT excluded"
+          grep -q "^\.git/" .helmignore && echo "  ✓ .git/ excluded" || echo "  ✗ .git/ NOT excluded"
+          grep -q "^\.github/" .helmignore && echo "  ✓ .github/ excluded" || echo "  ✗ .github/ NOT excluded"
 
-      - name: Check for changes
-        id: check
-        run: |
-          if [ -n "$(git status --porcelain docs/)" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit and push changes
-        if: steps.check.outputs.changed == 'true'
-        run: |
-          git add docs/
-          git commit -m "chore: update Helm chart package and index [skip ci]"
-          git push
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          charts_dir: .
+          config: cr.yaml
+          skip_packaging: false
+          skip_existing: false
+          # Release charts as GitHub Releases (not stored in repo)
+          release_name_template: "{{ .Name }}-{{ .Version }}"
+          # Publish index to gh-pages branch
+          pages_branch: gh-pages
+          pages_index_path: index.yaml
 
       - name: Summary
-        if: steps.check.outputs.changed == 'true'
         run: |
           echo "## Chart Released Successfully 🎉" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The Helm chart has been packaged and the repository index has been updated." >> $GITHUB_STEP_SUMMARY
+          echo "The Helm chart has been packaged and released." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Files updated:**" >> $GITHUB_STEP_SUMMARY
-          git diff --name-only HEAD~1 docs/ | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
-
-      - name: No changes
-        if: steps.check.outputs.changed == 'false'
-        run: |
-          echo "## No Changes Detected" >> $GITHUB_STEP_SUMMARY
-          echo "Chart package and index are already up to date." >> $GITHUB_STEP_SUMMARY
+          echo "**Installation:**" >> $GITHUB_STEP_SUMMARY
+          echo "Add the repository:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo add openclaw https://breymander.github.io/openclaw-helm-chart" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo update" >> $GITHUB_STEP_SUMMARY
+          echo "helm install my-openclaw openclaw/openclaw" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

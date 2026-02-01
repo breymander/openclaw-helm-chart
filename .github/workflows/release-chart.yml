@@ -67,7 +67,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Update index.yaml
+      - name: Update index.yaml and index.html
         run: |
           CHART_VERSION="${{ steps.package.outputs.chart_version }}"
           CHART_NAME="${{ steps.package.outputs.chart_name }}"
@@ -91,9 +91,18 @@ jobs:
             { print }
           ' index.yaml > index.yaml.tmp && mv index.yaml.tmp index.yaml
           
-          # Commit and push
-          git add index.yaml
-          git commit -m "Update index.yaml for ${CHART_VERSION} [skip ci]" || true
+          # Copy index.html from docs/ directory if it exists
+          if [ -f ../docs/index.html ]; then
+            cp ../docs/index.html .
+            git add index.html
+          fi
+          
+          # Add .nojekyll to prevent GitHub Pages from processing files
+          touch .nojekyll
+          
+          # Commit and push (using [skip ci] to avoid triggering other workflows)
+          git add index.yaml .nojekyll
+          git commit -m "Update index.yaml and index.html for ${CHART_VERSION} [skip ci]" || true
           git push origin gh-pages || true
 
       - name: Summary

@@ -57,7 +57,22 @@ jobs:
           echo "Packaged charts:"
           ls -lh .cr-release-packages/
 
+      - name: Create initial tag if none exists (workaround for latest_tag bug)
+        run: |
+          # Check if any tags exist
+          if ! git ls-remote --tags origin | grep -q "refs/tags/openclaw-"; then
+            echo "No existing tags found. Creating initial tag to work around latest_tag bug..."
+            CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}' | tr -d '"')
+            TAG_NAME="openclaw-${CHART_VERSION}"
+            git tag "$TAG_NAME" || true
+            git push origin "$TAG_NAME" || true
+            echo "Created initial tag: $TAG_NAME"
+          else
+            echo "Existing tags found, skipping initial tag creation"
+          fi
+
       - name: Run chart-releaser
+        id: cr
         uses: helm/chart-releaser-action@v1.7.0
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,6 +83,66 @@ jobs:
           skip_existing: false
           pages_branch: gh-pages
           packages_with_index: false
+        continue-on-error: true
+
+      - name: Manually update index.yaml (fallback if chart-releaser failed)
+        if: always()
+        run: |
+          echo "Ensuring index.yaml is updated with correct GitHub Release URLs..."
+          
+          # Get chart info
+          CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}' | tr -d '"')
+          CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}' | tr -d '"')
+          PACKAGE_FILE="${CHART_NAME}-${CHART_VERSION}.tgz"
+          RELEASE_TAG="openclaw-${CHART_VERSION}"
+          RELEASE_URL="https://github.com/breymander/openclaw-helm-chart/releases/download/${RELEASE_TAG}/${PACKAGE_FILE}"
+          
+          echo "Release URL: $RELEASE_URL"
+          
+          # Checkout gh-pages branch
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
+          
+          # Copy packaged chart to current directory for helm repo index
+          # We need to go back to the root to access .cr-release-packages
+          ROOT_DIR=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+          if [ -f "${ROOT_DIR}/.cr-release-packages/${PACKAGE_FILE}" ]; then
+            cp "${ROOT_DIR}/.cr-release-packages/${PACKAGE_FILE}" .
+          elif [ -f ".cr-release-packages/${PACKAGE_FILE}" ]; then
+            cp ".cr-release-packages/${PACKAGE_FILE}" .
+          fi
+          
+          # Generate/update index.yaml pointing to GitHub Release
+          if [ -f index.yaml ]; then
+            helm repo index . --url https://breymander.github.io/openclaw-helm-chart --merge index.yaml
+          else
+            helm repo index . --url https://breymander.github.io/openclaw-helm-chart
+          fi
+          
+          # Manually fix the URL in index.yaml to point to GitHub Release instead of GitHub Pages
+          # Chart Releaser might have generated a GitHub Pages URL, we need to fix it
+          if grep -q "github.io.*\.tgz" index.yaml; then
+            echo "Fixing URLs in index.yaml to point to GitHub Releases..."
+            sed -i "s|https://breymander.github.io/openclaw-helm-chart/${PACKAGE_FILE}|${RELEASE_URL}|g" index.yaml
+            sed -i "s|https://breymander.github.io/openclaw-helm-chart/.*/${PACKAGE_FILE}|${RELEASE_URL}|g" index.yaml
+          fi
+          
+          # Verify the URL
+          if grep -q "releases/download" index.yaml; then
+            echo "✓ index.yaml correctly points to GitHub Release"
+            grep -A 2 "urls:" index.yaml | head -5
+          else
+            echo "⚠ Warning: index.yaml may not point to GitHub Release"
+            cat index.yaml | grep -A 5 "urls:"
+          fi
+          
+          # Commit and push
+          git add index.yaml
+          git commit -m "Update index.yaml for ${CHART_VERSION} [skip ci]" || true
+          git push origin gh-pages || true
+          
+          # Switch back to original branch
+          git checkout ${{ github.ref_name }} || git checkout - || true
 
       - name: Summary
         run: |

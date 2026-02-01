@@ -21,12 +21,16 @@ on:
         type: boolean
 
 jobs:
-  compute-env:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      is_dev: ${{ steps.set.outputs.is_dev }}
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
     steps:
-      - id: set
+      - name: Set is_dev
+        id: set-env
         run: |
           if [ "${{ github.ref }}" = "refs/heads/dev" ] || [ "${{ github.event.inputs.dev_release }}" = "true" ]; then
             echo "is_dev=true" >> $GITHUB_OUTPUT
@@ -34,17 +38,6 @@ jobs:
             echo "is_dev=false" >> $GITHUB_OUTPUT
           fi
 
-  release:
-    needs: compute-env
-    runs-on: ubuntu-latest
-    env:
-      IS_DEV: ${{ needs.compute-env.outputs.is_dev }}
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-
-    steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -66,7 +59,7 @@ jobs:
           CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}' | tr -d '"')
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}' | tr -d '"')
           
-          if [ "${{ env.IS_DEV }}" = "true" ]; then
+          if [ "${{ steps.set-env.outputs.is_dev }}" = "true" ]; then
             PACKAGE_VERSION="${CHART_VERSION}-dev"
             helm package . --version "${PACKAGE_VERSION}" --destination /tmp
           else
@@ -78,7 +71,7 @@ jobs:
           echo "package_file=${PACKAGE_FILE}" >> $GITHUB_OUTPUT
           echo "chart_version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
           echo "chart_name=${CHART_NAME}" >> $GITHUB_OUTPUT
-          echo "is_dev=${{ env.IS_DEV }}" >> $GITHUB_OUTPUT
+          echo "is_dev=${{ steps.set-env.outputs.is_dev }}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -97,8 +90,8 @@ jobs:
             helm install my-openclaw openclaw/openclaw${{ steps.package.outputs.is_dev == 'true' && format(' --version {0}', steps.package.outputs.chart_version) || '' }}
             ```
           draft: false
-          prerelease: ${{ env.IS_DEV }}
-          replace: ${{ env.IS_DEV }}
+          prerelease: ${{ steps.set-env.outputs.is_dev }}
+          replace: ${{ steps.set-env.outputs.is_dev }}
 
       - name: Update index.yaml and index.html
         env:

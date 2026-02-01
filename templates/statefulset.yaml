@@ -32,6 +32,18 @@ spec:
       serviceAccountName: {{ include "openclaw.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+      initContainers:
+      - name: gateway-config
+        image: busybox:1.36
+        command: ["sh", "-c", "cp /config-source/openclaw.json /openclaw-config/openclaw.json"]
+        volumeMounts:
+        - name: gateway-config-source
+          mountPath: /config-source
+          readOnly: true
+        - name: openclaw-config
+          mountPath: /openclaw-config
+      {{- end }}
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
@@ -95,10 +107,6 @@ spec:
               key: {{ $key }}
         {{- end }}
         {{- end }}
-        {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
-        - name: OPENCLAW_GATEWAY_CONTROL_UI_ALLOW_INSECURE_AUTH
-          value: "true"
-        {{- end }}
         {{- if .Values.command }}
         command:
         {{- range .Values.command }}
@@ -115,9 +123,18 @@ spec:
         volumeMounts:
         - name: data
           mountPath: {{ .Values.env.DATA_DIR | default "/data" }}
+        {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+        - name: openclaw-config
+          mountPath: /home/node/.openclaw
+        {{- end }}
         {{- if .Values.extraVolumeMounts }}
         {{- toYaml .Values.extraVolumeMounts | nindent 8 }}
         {{- end }}
+        {{- end }}
+        {{- if and (not .Values.persistence.enabled) .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+        volumeMounts:
+        - name: openclaw-config
+          mountPath: /home/node/.openclaw
         {{- end }}
         {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
@@ -147,9 +164,18 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
-      {{- if .Values.extraVolumes }}
+      {{- if or (and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth) .Values.extraVolumes }}
       volumes:
+      {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+      - name: gateway-config-source
+        configMap:
+          name: {{ include "openclaw.fullname" . }}-gateway-config
+      - name: openclaw-config
+        emptyDir: {}
+      {{- end }}
+      {{- if .Values.extraVolumes }}
       {{- toYaml .Values.extraVolumes | nindent 6 }}
+      {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

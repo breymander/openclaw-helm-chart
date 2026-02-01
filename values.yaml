@@ -113,7 +113,8 @@ extraEnv: []
   #       key: secret-key
 
 # Gateway Control UI settings
-# allowInsecureAuth: when true, allows token-in-URL auth (e.g. ?token=...) for the Control UI.
+# allowInsecureAuth: when true, injects gateway.controlUi.allowInsecureAuth into ~/.openclaw/openclaw.json
+# (OpenClaw reads this from config file, not env). Allows token-in-URL auth (e.g. ?token=...) for the Control UI.
 gateway:
   controlUi:
     allowInsecureAuth: true

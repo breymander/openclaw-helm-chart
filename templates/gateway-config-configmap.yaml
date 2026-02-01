@@ -1,0 +1,11 @@
+{{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openclaw.fullname" . }}-gateway-config
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+data:
+  openclaw.json: |
+    {"gateway":{"controlUi":{"allowInsecureAuth":true}},"agent":{"workspace":"/data"}}
+{{- end }}

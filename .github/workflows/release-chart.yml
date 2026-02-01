@@ -21,7 +21,7 @@ on:
         type: boolean
 
 jobs:
-  vars:
+  compute-env:
     runs-on: ubuntu-latest
     outputs:
       is_dev: ${{ steps.set.outputs.is_dev }}
@@ -35,10 +35,10 @@ jobs:
           fi
 
   release:
-    needs: vars
+    needs: compute-env
     runs-on: ubuntu-latest
     env:
-      IS_DEV: ${{ needs.vars.outputs.is_dev }}
+      IS_DEV: ${{ needs.compute-env.outputs.is_dev }}
     permissions:
       contents: write
       pages: write

@@ -91,8 +91,7 @@ jobs:
           CHART_VERSION="${{ steps.package.outputs.chart_version }}"
           CHART_NAME="${{ steps.package.outputs.chart_name }}"
           PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
-          RELEASE_TAG="openclaw-${CHART_VERSION}"
-          RELEASE_URL="https://github.com/breymander/openclaw-helm-chart/releases/download/${RELEASE_TAG}/${PACKAGE_FILE}"
+          BASE_URL="https://github.com/breymander/openclaw-helm-chart/releases/download"
           
           # Checkout gh-pages branch
           git fetch origin gh-pages:gh-pages 2>/dev/null || true
@@ -106,31 +105,40 @@ jobs:
           cd docs
           helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
           
-          # Replace all URLs with GitHub Release URL
-          # Use awk with flexible pattern matching to handle various indentation
-          awk -v url="${RELEASE_URL}" '
-            /urls:/ { 
-              in_urls=1
+          # Replace each entry's URL with the correct GitHub Release URL for that version.
+          # Helm index has urls like "- openclaw-0.1.0.tgz"; we extract version from the
+          # filename (chart_name-version.tgz) and build the GitHub release download URL.
+          awk -v chart_name="${CHART_NAME}" -v base_url="${BASE_URL}" '
+            /urls:/ {
+              in_urls = 1
               print
               next
             }
             in_urls && /^[[:space:]]+-/ {
-              # Match any line starting with spaces and a dash after urls:
-              # Extract the indentation and replace the entire line
+              # Extract version from filename: chart_name-version.tgz
+              fn = $0
+              sub(/^[[:space:]]+-[[:space:]]*["]?/, "", fn)
+              sub(/["]?[[:space:]]*$/, "", fn)
+              if (match(fn, chart_name "-")) {
+                version = substr(fn, RLENGTH + 1)
+                sub(/\.tgz$/, "", version)
+              } else {
+                version = fn
+              }
               match($0, /^[[:space:]]+/)
               indent = substr($0, 1, RLENGTH)
+              url = base_url "/openclaw-" version "/" chart_name "-" version ".tgz"
               print indent "- \"" url "\""
-              in_urls=0
+              in_urls = 0
               next
             }
             in_urls && /^[[:space:]]*[a-zA-Z]/ && !/^[[:space:]]+-/ {
-              # End of urls section (next key that is not a list item)
-              in_urls=0
+              in_urls = 0
             }
             { print }
           ' index.yaml > index.yaml.tmp && mv index.yaml.tmp index.yaml
           
-          # Verify the replacement worked
+          # Verify every url is a release download URL
           if ! grep -q "releases/download" index.yaml; then
             echo "ERROR: URL replacement failed. Current index.yaml content:"
             cat index.yaml

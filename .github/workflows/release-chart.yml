@@ -19,6 +19,7 @@ on:
         required: false
         default: false
         type: boolean
+
 jobs:
   release:
     runs-on: ubuntu-latest

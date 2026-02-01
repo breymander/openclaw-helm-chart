@@ -21,10 +21,24 @@ on:
         type: boolean
 
 jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      is_dev: ${{ steps.set.outputs.is_dev }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/dev" ] || [ "${{ github.event.inputs.dev_release }}" = "true" ]; then
+            echo "is_dev=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_dev=false" >> $GITHUB_OUTPUT
+          fi
+
   release:
+    needs: vars
     runs-on: ubuntu-latest
     env:
-      IS_DEV: ${{ github.ref == 'refs/heads/dev' || (github.event.inputs.dev_release == 'true') }}
+      IS_DEV: ${{ needs.vars.outputs.is_dev }}
     permissions:
       contents: write
       pages: write

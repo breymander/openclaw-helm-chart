@@ -5,8 +5,8 @@
 # GitHub repository owner
 owner: breymander
 
-# GitHub repository name
+# GitHub repository name  
 git-repo: openclaw-helm-chart
 
-# Chart name (from Chart.yaml)
-chart-name: openclaw
+# Remote name (default: origin)
+remote: origin

@@ -88,13 +88,7 @@ jobs:
           helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
           
           # Replace all URLs with GitHub Release URL
-          # First, use sed to replace any occurrence of the package filename with the full release URL
-          sed -i "s|\"${PACKAGE_FILE}\"|\"${RELEASE_URL}\"|g" index.yaml
-          sed -i "s|'${PACKAGE_FILE}'|\"${RELEASE_URL}\"|g" index.yaml
-          sed -i "s|- ${PACKAGE_FILE}|- \"${RELEASE_URL}\"|g" index.yaml
-          sed -i "s|${PACKAGE_FILE}|${RELEASE_URL}|g" index.yaml
-          
-          # Then use awk to ensure the urls: section has the correct format
+          # Use awk to replace URLs in the urls: section
           awk -v url="${RELEASE_URL}" '
             /^  urls:/ { 
               in_urls=1
@@ -102,7 +96,7 @@ jobs:
               next
             }
             in_urls && /^    -/ {
-              # Always replace the URL line with the release URL
+              # Always replace with the release URL (removes any existing URL, filename, or path)
               print "    - \"" url "\""
               in_urls=0
               next

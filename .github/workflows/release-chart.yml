@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       dev_release:
-        description: 'Force dev-style release (version suffix -dev.N, prerelease)'
+        description: 'Force dev-style release (version suffix -dev, prerelease)'
         required: false
         default: false
         type: boolean
@@ -54,7 +54,7 @@ jobs:
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}' | tr -d '"')
           
           if [ "${{ env.IS_DEV }}" = "true" ]; then
-            PACKAGE_VERSION="${CHART_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+            PACKAGE_VERSION="${CHART_VERSION}-dev"
             helm package . --version "${PACKAGE_VERSION}" --destination /tmp
           else
             PACKAGE_VERSION="${CHART_VERSION}"
@@ -85,6 +85,7 @@ jobs:
             ```
           draft: false
           prerelease: ${{ env.IS_DEV }}
+          replace: ${{ env.IS_DEV }}
 
       - name: Update index.yaml and index.html
         run: |
@@ -106,8 +107,9 @@ jobs:
           helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
           
           # Replace each entry's URL with the correct GitHub Release URL for that version.
-          # Helm index has urls like "- openclaw-0.1.0.tgz"; we extract version from the
-          # filename (chart_name-version.tgz) and build the GitHub release download URL.
+          # Works for both relative filenames (openclaw-0.1.0.tgz) and existing full URLs;
+          # we match the chart package filename (chart_name-VERSION.tgz) so we never
+          # mistake "openclaw-helm-chart" in the path for the version.
           awk -v chart_name="${CHART_NAME}" -v base_url="${BASE_URL}" '
             /urls:/ {
               in_urls = 1
@@ -115,15 +117,19 @@ jobs:
               next
             }
             in_urls && /^[[:space:]]+-/ {
-              # Extract version from filename: chart_name-version.tgz
               fn = $0
               sub(/^[[:space:]]+-[[:space:]]*["]?/, "", fn)
               sub(/["]?[[:space:]]*$/, "", fn)
-              if (match(fn, chart_name "-")) {
-                version = substr(fn, RLENGTH + 1)
-                sub(/\.tgz$/, "", version)
+              # Match chart package filename (chart_name-VERSION.tgz); VERSION has no /
+              # so we avoid matching openclaw-helm-chart in full URLs
+              pat = chart_name "-[^/]+\\.tgz"
+              if (match(fn, pat)) {
+                # Skip "chart_name-" (length+1), take rest minus ".tgz" (4 chars)
+                version = substr(fn, RSTART + length(chart_name) + 1, RLENGTH - length(chart_name) - 5)
               } else {
                 version = fn
+                sub(/\.tgz$/, "", version)
+                sub(/^.*-/, "", version)
               }
               match($0, /^[[:space:]]+/)
               indent = substr($0, 1, RLENGTH)

@@ -107,20 +107,46 @@ jobs:
               "https://api.github.com/repos/${GH_REPO}/releases?per_page=100&page=${page}")
             count=$(echo "${resp}" | jq 'length')
             [ "${count}" -eq 0 ] && break
-            echo "${resp}" | jq -r -c --arg chart "${CHART_NAME}" '.[] | select(.draft == false) | .assets[] | select(.name | endswith(".tgz")) | {version: (.name | sub("\\.tgz$"; "") | sub("^" + $chart + "-"; "")), url: .browser_download_url}' >> "${ENTRIES_FILE}"
+            echo "${resp}" | jq -r -c --arg chart "${CHART_NAME}" '.[] | select(.draft == false) | . as $rel | .assets[] | select(.name | endswith(".tgz")) | {version: (.name | sub("\\.tgz$"; "") | sub("^" + $chart + "-"; "")), url: .browser_download_url, created: $rel.published_at}' >> "${ENTRIES_FILE}"
             [ "${count}" -lt 100 ] && break
             page=$((page + 1))
           done
           
           # Add current build (API may be briefly stale)
-          echo "{\"version\":\"${CURRENT_VERSION}\",\"url\":\"${BASE_URL}/openclaw-${CURRENT_VERSION}/${CURRENT_PACKAGE}\"}" >> "${ENTRIES_FILE}"
+          echo "{\"version\":\"${CURRENT_VERSION}\",\"url\":\"${BASE_URL}/openclaw-${CURRENT_VERSION}/${CURRENT_PACKAGE}\",\"created\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> "${ENTRIES_FILE}"
           
-          # Build index.yaml from metadata (sort by version, dedupe)
+          # Build index.yaml from metadata (sort by version, dedupe) with full static metadata per entry
           {
             echo "apiVersion: v1"
             echo "entries:"
             echo "  ${CHART_NAME}:"
-            jq -r -n '[inputs] | sort_by(.version) | unique_by(.version) | .[] | "  - name: '"${CHART_NAME}"'\n    version: \(.version)\n    urls:\n    - \"\(.url)\""' < "${ENTRIES_FILE}"
+            jq -r -n '[inputs] | sort_by(.version) | unique_by(.version) | .[] | @json' < "${ENTRIES_FILE}" | while read -r line; do
+              version=$(echo "${line}" | jq -r '.version')
+              url=$(echo "${line}" | jq -r '.url')
+              created=$(echo "${line}" | jq -r 'if .created then .created else (now | strftime("%Y-%m-%dT%H:%M:%SZ")) end')
+              cat << ENTRY
+  - apiVersion: v2
+    appVersion: latest
+    created: "${created}"
+    description: A Helm chart for OpenClaw - an open-source personal AI assistant
+    home: https://github.com/breymander/openclaw-helm-chart
+    keywords:
+    - openclaw
+    - ai
+    - assistant
+    - claude
+    maintainers:
+    - name: OpenClaw Community
+    name: ${CHART_NAME}
+    sources:
+    - https://github.com/breymander/openclaw-helm-chart
+    - https://github.com/openclaw/openclaw
+    type: application
+    urls:
+    - "${url}"
+    version: "${version}"
+ENTRY
+            done
             echo "generated: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
           } > /tmp/index.yaml
           

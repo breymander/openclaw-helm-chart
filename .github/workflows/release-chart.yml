@@ -67,6 +67,7 @@ jobs:
           skip_packaging: true
           skip_existing: false
           pages_branch: gh-pages
+          packages_with_index: false
 
       - name: Summary
         run: |

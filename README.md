@@ -173,6 +173,12 @@ envFromSecret:
 | `resources.requests.cpu` | CPU request | `500m` |
 | `resources.requests.memory` | Memory request | `1Gi` |
 
+### Gateway Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). | `true` |
+
 ### Security Configuration
 
 | Parameter | Description | Default |

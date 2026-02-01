@@ -95,6 +95,10 @@ spec:
               key: {{ $key }}
         {{- end }}
         {{- end }}
+        {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+        - name: OPENCLAW_GATEWAY_CONTROL_UI_ALLOW_INSECURE_AUTH
+          value: "true"
+        {{- end }}
         {{- if .Values.command }}
         command:
         {{- range .Values.command }}

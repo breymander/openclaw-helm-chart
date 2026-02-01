@@ -3,7 +3,7 @@
 
 # Image configuration
 image:
-  repository: openclaw/openclaw
+  repository: ghcr.io/openclaw/openclaw
   tag: "latest"
   pullPolicy: IfNotPresent
 

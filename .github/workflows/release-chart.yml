@@ -38,30 +38,40 @@ jobs:
           version: 'latest'
 
       - name: Package chart
-        run: |
-          mkdir -p .cr-release-packages
-          helm package . --destination .cr-release-packages
-
-      - name: Run chart-releaser
-        id: cr
-        uses: helm/chart-releaser-action@v1.7.0
-        env:
-          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          charts_dir: .
-          config: cr.yaml
-          skip_packaging: true
-          skip_existing: false
-          pages_branch: gh-pages
-          packages_with_index: false
-        continue-on-error: true
-
-      - name: Update index.yaml with GitHub Release URLs
-        if: always()
+        id: package
         run: |
           CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}' | tr -d '"')
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}' | tr -d '"')
           PACKAGE_FILE="${CHART_NAME}-${CHART_VERSION}.tgz"
+          
+          helm package . --destination /tmp
+          echo "package_file=${PACKAGE_FILE}" >> $GITHUB_OUTPUT
+          echo "chart_version=${CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "chart_name=${CHART_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: /tmp/${{ steps.package.outputs.package_file }}
+          tag_name: openclaw-${{ steps.package.outputs.chart_version }}
+          name: Release ${{ steps.package.outputs.chart_version }}
+          body: |
+            Helm chart release for version ${{ steps.package.outputs.chart_version }}
+            
+            **Installation:**
+            ```bash
+            helm repo add openclaw https://breymander.github.io/openclaw-helm-chart
+            helm repo update
+            helm install my-openclaw openclaw/openclaw
+            ```
+          draft: false
+          prerelease: false
+
+      - name: Update index.yaml
+        run: |
+          CHART_VERSION="${{ steps.package.outputs.chart_version }}"
+          CHART_NAME="${{ steps.package.outputs.chart_name }}"
+          PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
           RELEASE_TAG="openclaw-${CHART_VERSION}"
           RELEASE_URL="https://github.com/breymander/openclaw-helm-chart/releases/download/${RELEASE_TAG}/${PACKAGE_FILE}"
           
@@ -70,7 +80,7 @@ jobs:
           git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
           
           # Copy package and generate index
-          cp .cr-release-packages/${PACKAGE_FILE} .
+          cp /tmp/${PACKAGE_FILE} .
           helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
           
           # Replace all URLs with GitHub Release URL

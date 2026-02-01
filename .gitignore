@@ -4,6 +4,10 @@ charts/
 *.tgz
 .helm/
 
+# Keep docs/ directory for GitHub Pages (but ignore root-level .tgz)
+!docs/*.tgz
+!docs/index.yaml
+
 # Environment files
 .env
 .env.local

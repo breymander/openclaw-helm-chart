@@ -9,8 +9,9 @@ keywords:
   - ai
   - assistant
   - claude
-home: https://github.com/openclaw/openclaw
+home: https://github.com/breymander/openclaw-helm-chart
 sources:
+  - https://github.com/breymander/openclaw-helm-chart
   - https://github.com/openclaw/openclaw
 maintainers:
   - name: OpenClaw Community

@@ -16,12 +16,14 @@ OpenClaw (formerly known as MoltBot/ClawdBot) is a personal, open-source AI assi
 
 ## Installation
 
-### Add the Helm repository (if applicable)
+### Add the Helm repository
 
 ```bash
-helm repo add openclaw https://your-helm-repo-url
+helm repo add openclaw https://breymander.github.io/openclaw-helm-chart
 helm repo update
 ```
+
+**Note**: If you're installing from the GitHub repository directly, you can skip this step and install from the local chart directory.
 
 ### Secure Secret Management (REQUIRED)
 
@@ -523,6 +525,7 @@ This Helm chart is provided as-is. OpenClaw itself is licensed under the MIT Lic
 
 ## References
 
+- [OpenClaw Helm Chart Repository](https://github.com/breymander/openclaw-helm-chart)
 - [OpenClaw GitHub Repository](https://github.com/openclaw/openclaw)
 - [Helm Documentation](https://helm.sh/docs/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)

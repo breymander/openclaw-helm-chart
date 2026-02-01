@@ -99,14 +99,20 @@ jobs:
           # Copy index.html from source docs/ directory if it exists
           if [ -f ../docs/index.html ]; then
             cp ../docs/index.html docs/
-            git add docs/index.html
           fi
           
           # Add .nojekyll to prevent GitHub Pages from processing files
           touch .nojekyll
           
+          # Force add files in docs/ directory (they're ignored by .gitignore in main branch)
+          # but we need them tracked in gh-pages branch
+          git add -f docs/index.yaml
+          if [ -f docs/index.html ]; then
+            git add -f docs/index.html
+          fi
+          git add .nojekyll
+          
           # Commit and push (using [skip ci] to avoid triggering other workflows)
-          git add docs/index.yaml .nojekyll
           git commit -m "Update index.yaml and index.html for ${CHART_VERSION} [skip ci]" || true
           git push origin gh-pages || true
 

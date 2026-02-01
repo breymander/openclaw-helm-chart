@@ -1,0 +1,90 @@
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# GitHub Pages (not part of the chart package)
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Development and testing
+test/
+tests/
+*.test.yaml
+*.test.yml
+*.test.sh
+validate-*.sh
+*.test.js
+*.test.ts
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.envrc
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.backup
+*.orig
+
+# Kubernetes configs (not part of chart)
+kubeconfig
+*.kubeconfig
+
+# Secrets (should never be in chart)
+secrets.yaml
+*-secrets.yaml
+secrets/
+*.secret.yaml
+
+# Build artifacts
+dist/
+build/
+target/
+*.tgz
+
+# Helm
+Chart.lock
+.helm/
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python (if any)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv
+
+# OS files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride

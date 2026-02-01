@@ -148,6 +148,22 @@
       "description": "Extra arguments appended to the container command",
       "items": { "type": "string" }
     },
+    "gateway": {
+      "type": "object",
+      "description": "Gateway Control UI settings",
+      "properties": {
+        "controlUi": {
+          "type": "object",
+          "properties": {
+            "allowInsecureAuth": {
+              "type": "boolean",
+              "description": "Allow token-in-URL auth for Control UI (e.g. ?token=...).",
+              "default": true
+            }
+          }
+        }
+      }
+    },
     "extraEnv": {
       "type": "array",
       "description": "Additional environment variables",

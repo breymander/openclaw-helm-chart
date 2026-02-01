@@ -112,6 +112,12 @@ extraEnv: []
   #       name: my-secret
   #       key: secret-key
 
+# Gateway Control UI settings
+# allowInsecureAuth: when true, allows token-in-URL auth (e.g. ?token=...) for the Control UI.
+gateway:
+  controlUi:
+    allowInsecureAuth: true
+
 # Environment variables from ConfigMap
 envFromConfigMap: []
   # Example:

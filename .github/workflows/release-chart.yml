@@ -88,88 +88,60 @@ jobs:
           replace: ${{ env.IS_DEV }}
 
       - name: Update index.yaml and index.html
+        env:
+          GH_REPO: breymander/openclaw-helm-chart
+          CHART_NAME: ${{ steps.package.outputs.chart_name }}
+          CURRENT_VERSION: ${{ steps.package.outputs.chart_version }}
+          CURRENT_PACKAGE: ${{ steps.package.outputs.package_file }}
+          BASE_URL: https://github.com/breymander/openclaw-helm-chart/releases/download
         run: |
-          CHART_VERSION="${{ steps.package.outputs.chart_version }}"
-          CHART_NAME="${{ steps.package.outputs.chart_name }}"
-          PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
-          BASE_URL="https://github.com/breymander/openclaw-helm-chart/releases/download"
+          set -e
+          ENTRIES_FILE="/tmp/entries.jsonl"
+          : > "${ENTRIES_FILE}"
           
-          # Checkout gh-pages branch
-          git fetch origin gh-pages:gh-pages 2>/dev/null || true
-          git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
+          # Collect .tgz asset metadata from all releases via API (no downloads)
+          page=1
+          while true; do
+            resp=$(curl -sS -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${GH_REPO}/releases?per_page=100&page=${page}")
+            count=$(echo "${resp}" | jq 'length')
+            [ "${count}" -eq 0 ] && break
+            echo "${resp}" | jq -r -c --arg chart "${CHART_NAME}" '.[] | select(.draft == false) | .assets[] | select(.name | endswith(".tgz")) | {version: (.name | sub("\\.tgz$"; "") | sub("^" + $chart + "-"; "")), url: .browser_download_url}' >> "${ENTRIES_FILE}"
+            [ "${count}" -lt 100 ] && break
+            page=$((page + 1))
+          done
           
-          # Create docs/ directory if it doesn't exist
-          mkdir -p docs
+          # Add current build (API may be briefly stale)
+          echo "{\"version\":\"${CURRENT_VERSION}\",\"url\":\"${BASE_URL}/openclaw-${CURRENT_VERSION}/${CURRENT_PACKAGE}\"}" >> "${ENTRIES_FILE}"
           
-          # Copy package to docs/ and generate index
-          cp /tmp/${PACKAGE_FILE} docs/
-          cd docs
-          helm repo index . --merge index.yaml 2>/dev/null || helm repo index .
+          # Build index.yaml from metadata (sort by version, dedupe)
+          {
+            echo "apiVersion: v1"
+            echo "entries:"
+            echo "  ${CHART_NAME}:"
+            jq -r -n '[inputs] | sort_by(.version) | unique_by(.version) | .[] | "  - name: '"${CHART_NAME}"'\n    version: \(.version)\n    urls:\n    - \"\(.url)\""' < "${ENTRIES_FILE}"
+            echo "generated: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
+          } > /tmp/index.yaml
           
-          # Replace each entry's URL with the correct GitHub Release URL for that version.
-          # Works for both relative filenames (openclaw-0.1.0.tgz) and existing full URLs;
-          # we match the chart package filename (chart_name-VERSION.tgz) so we never
-          # mistake "openclaw-helm-chart" in the path for the version.
-          awk -v chart_name="${CHART_NAME}" -v base_url="${BASE_URL}" '
-            /urls:/ {
-              in_urls = 1
-              print
-              next
-            }
-            in_urls && /^[[:space:]]+-/ {
-              fn = $0
-              sub(/^[[:space:]]+-[[:space:]]*["]?/, "", fn)
-              sub(/["]?[[:space:]]*$/, "", fn)
-              # Match chart package filename (chart_name-VERSION.tgz); VERSION has no /
-              # so we avoid matching openclaw-helm-chart in full URLs
-              pat = chart_name "-[^/]+\\.tgz"
-              if (match(fn, pat)) {
-                # Skip "chart_name-" (length+1), take rest minus ".tgz" (4 chars)
-                version = substr(fn, RSTART + length(chart_name) + 1, RLENGTH - length(chart_name) - 5)
-              } else {
-                version = fn
-                sub(/\.tgz$/, "", version)
-                sub(/^.*-/, "", version)
-              }
-              match($0, /^[[:space:]]+/)
-              indent = substr($0, 1, RLENGTH)
-              url = base_url "/openclaw-" version "/" chart_name "-" version ".tgz"
-              print indent "- \"" url "\""
-              in_urls = 0
-              next
-            }
-            in_urls && /^[[:space:]]*[a-zA-Z]/ && !/^[[:space:]]+-/ {
-              in_urls = 0
-            }
-            { print }
-          ' index.yaml > index.yaml.tmp && mv index.yaml.tmp index.yaml
-          
-          # Verify every url is a release download URL
-          if ! grep -q "releases/download" index.yaml; then
-            echo "ERROR: URL replacement failed. Current index.yaml content:"
-            cat index.yaml
+          if ! grep -q "releases/download" /tmp/index.yaml; then
+            echo "ERROR: No release URLs in index.yaml"
+            cat /tmp/index.yaml
             exit 1
           fi
-          cd ..
           
-          # Copy index.html from source docs/ directory if it exists
-          if [ -f ../docs/index.html ]; then
-            cp ../docs/index.html docs/
-          fi
+          # Checkout gh-pages and update index
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
+          mkdir -p docs
+          cp /tmp/index.yaml docs/
           
-          # Add .nojekyll to prevent GitHub Pages from processing files
           touch .nojekyll
           
-          # Force add files in docs/ directory (they're ignored by .gitignore in main branch)
-          # but we need them tracked in gh-pages branch
           git add -f docs/index.yaml
-          if [ -f docs/index.html ]; then
-            git add -f docs/index.html
-          fi
+          [ -f docs/index.html ] && git add -f docs/index.html
           git add .nojekyll
-          
-          # Commit and push (using [skip ci] to avoid triggering other workflows)
-          git commit -m "Update index.yaml and index.html for ${CHART_VERSION} [skip ci]" || true
+          git commit -m "Update index.yaml from releases [skip ci]" || true
           git push origin gh-pages || true
 
       - name: Summary

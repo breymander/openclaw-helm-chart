@@ -21,7 +21,7 @@ on:
         type: boolean
 
 env:
-  IS_DEV: ${{ github.ref == 'refs/heads/dev' || github.event.inputs.dev_release == 'true' }}
+  IS_DEV: "${{ github.ref == 'refs/heads/dev' || github.event.inputs.dev_release == 'true' }}"
 
 jobs:
   release:

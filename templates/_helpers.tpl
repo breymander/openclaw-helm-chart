@@ -180,3 +180,14 @@ Get replica-specific affinity
 {{- toYaml $defaultAffinity }}
 {{- end }}
 {{- end }}
+
+{{/*
+Gateway config JSON for openclaw.json (controlUi + channels).
+Used by the gateway ConfigMap; merged into ~/.openclaw/openclaw.json at runtime.
+*/}}
+{{- define "openclaw.gatewayJson" -}}
+{{- $controlUi := .Values.gateway.controlUi | default dict }}
+{{- $channels := .Values.gateway.channels | default dict }}
+{{- $gateway := dict "controlUi" $controlUi "channels" $channels }}
+{{- dict "gateway" $gateway | toJson }}
+{{- end }}

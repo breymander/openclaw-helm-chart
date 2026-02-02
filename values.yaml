@@ -119,6 +119,24 @@ extraEnv: []
 gateway:
   controlUi:
     allowInsecureAuth: true
+  # Built-in OpenClaw channels (WhatsApp, Telegram, Discord, Slack, Google Chat, etc.).
+  # Config is merged into ~/.openclaw/openclaw.json under gateway.channels.
+  # Put tokens in existingSecret (e.g. TELEGRAM_BOT_TOKEN) and reference in channel config if the app supports env vars; see README.
+  channels: {}
+    # Example - Telegram (put TELEGRAM_BOT_TOKEN in existingSecret):
+    # telegram:
+    #   enabled: true
+    #   allowFrom: ["123456789"]
+    #   groups: {"*": { requireMention: true }}
+    # Example - Discord (put token in existingSecret and reference via env or configure in Control UI):
+    # discord:
+    #   enabled: true
+    #   dm: { enabled: true, allowFrom: ["your-username"] }
+    #   guilds: {}
+    # Example - WhatsApp (allowlist a number; pairing is done via Control UI):
+    # whatsapp:
+    #   allowFrom: ["+15555550123"]
+    #   groups: {"*": { requireMention: true }}
   # Init container image; must have sh and jq (merge/create JSON). Default: pascaliske/alpine-curl-jq (jq pre-installed).
   initImage: "pascaliske/alpine-curl-jq"
 

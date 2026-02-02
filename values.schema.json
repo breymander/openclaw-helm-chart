@@ -150,7 +150,7 @@
     },
     "gateway": {
       "type": "object",
-      "description": "Gateway Control UI settings",
+      "description": "Gateway Control UI and built-in channels settings",
       "properties": {
         "controlUi": {
           "type": "object",
@@ -161,6 +161,11 @@
               "default": true
             }
           }
+        },
+        "channels": {
+          "type": "object",
+          "description": "Built-in OpenClaw channels (WhatsApp, Telegram, Discord, Slack, etc.). Merged into gateway.channels in ~/.openclaw/openclaw.json.",
+          "additionalProperties": true
         },
         "initImage": {
           "type": "string",

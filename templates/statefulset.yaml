@@ -37,10 +37,13 @@ spec:
       - name: gateway-config
         image: {{ .Values.gateway.initImage | default "pascaliske/alpine-curl-jq" | quote }}
         {{- if .Values.persistence.enabled }}
-        command: ["/bin/sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq '.gateway.controlUi.allowInsecureAuth = true' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else echo '{\"gateway\":{\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.openclaw/openclaw.json; fi"]
+        command: ["/bin/sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq --slurpfile override /config-source/openclaw.json '.gateway = (($.gateway // {}) * ($override[0].gateway // {}))' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else cp /config-source/openclaw.json /data/.openclaw/openclaw.json; fi"]
         volumeMounts:
         - name: data
           mountPath: {{ .Values.env.DATA_DIR | default "/data" }}
+        - name: gateway-config-source
+          mountPath: /config-source
+          readOnly: true
         {{- else }}
         command: ["/bin/sh", "-c", "cp /config-source/openclaw.json /openclaw-config/openclaw.json"]
         volumeMounts:
@@ -172,14 +175,16 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
-      {{- if or (and (not .Values.persistence.enabled) .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth) .Values.extraVolumes }}
+      {{- if or (and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth) .Values.extraVolumes }}
       volumes:
-      {{- if and (not .Values.persistence.enabled) .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
+      {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
       - name: gateway-config-source
         configMap:
           name: {{ include "openclaw.fullname" . }}-gateway-config
+      {{- if not .Values.persistence.enabled }}
       - name: openclaw-config
         emptyDir: {}
+      {{- end }}
       {{- end }}
       {{- if .Values.extraVolumes }}
       {{- toYaml .Values.extraVolumes | nindent 6 }}

@@ -150,7 +150,7 @@
     },
     "gateway": {
       "type": "object",
-      "description": "Gateway Control UI settings",
+      "description": "Gateway Control UI and built-in channels settings",
       "properties": {
         "controlUi": {
           "type": "object",
@@ -162,17 +162,17 @@
             }
           }
         },
+        "channels": {
+          "type": "object",
+          "description": "Built-in OpenClaw channels (WhatsApp, Telegram, Discord, Slack, etc.). Merged into gateway.channels in ~/.openclaw/openclaw.json.",
+          "additionalProperties": true
+        },
         "initImage": {
           "type": "string",
           "description": "Init container image; must have sh and jq (merge/create JSON). Default: pascaliske/alpine-curl-jq (jq pre-installed).",
           "default": "pascaliske/alpine-curl-jq"
         }
       }
-    },
-    "channels": {
-      "type": "object",
-      "description": "Built-in OpenClaw channels (WhatsApp, Telegram, Discord, Slack, etc.). Mirrors openclaw.json top-level channels key.",
-      "additionalProperties": true
     },
     "extraEnv": {
       "type": "array",

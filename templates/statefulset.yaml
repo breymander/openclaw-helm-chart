@@ -35,9 +35,9 @@ spec:
       {{- if and .Values.gateway .Values.gateway.controlUi .Values.gateway.controlUi.allowInsecureAuth }}
       initContainers:
       - name: gateway-config
-        image: {{ .Values.gateway.initImage | default "alpine:3.19" | quote }}
+        image: {{ .Values.gateway.initImage | default "pascaliske/alpine-curl-jq" | quote }}
         {{- if .Values.persistence.enabled }}
-        command: ["/bin/sh", "-c", "apk add --no-cache jq && mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq '.gateway.controlUi.allowInsecureAuth = true' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else echo '{\"gateway\":{\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.openclaw/openclaw.json; fi"]
+        command: ["/bin/sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq '.gateway.controlUi.allowInsecureAuth = true' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else echo '{\"gateway\":{\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.openclaw/openclaw.json; fi"]
         volumeMounts:
         - name: data
           mountPath: {{ .Values.env.DATA_DIR | default "/data" }}

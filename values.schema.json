@@ -164,8 +164,8 @@
         },
         "initImage": {
           "type": "string",
-          "description": "Init container image; must have sh and jq (merge/create JSON). Default: alpine (jq installed at runtime).",
-          "default": "alpine:3.19"
+          "description": "Init container image; must have sh and jq (merge/create JSON). Default: pascaliske/alpine-curl-jq (jq pre-installed).",
+          "default": "pascaliske/alpine-curl-jq"
         }
       }
     },

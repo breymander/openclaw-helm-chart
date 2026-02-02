@@ -119,8 +119,8 @@ extraEnv: []
 gateway:
   controlUi:
     allowInsecureAuth: true
-  # Init container image; must have sh and jq (merge/create JSON). Default: alpine (jq installed at runtime).
-  initImage: "alpine:3.19"
+  # Init container image; must have sh and jq (merge/create JSON). Default: pascaliske/alpine-curl-jq (jq pre-installed).
+  initImage: "pascaliske/alpine-curl-jq"
 
 # Environment variables from ConfigMap
 envFromConfigMap: []

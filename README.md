@@ -180,7 +180,7 @@ envFromSecret:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). With persistence: init merges into `/data/.openclaw/openclaw.json` (creates if missing). Without persistence: ephemeral config at `~/.openclaw/openclaw.json`. | `true` |
-| `gateway.initImage` | Init container image; must have `sh` and `jq` (merge/create JSON). Default: `alpine:3.19` (jq installed at runtime). | `alpine:3.19` |
+| `gateway.initImage` | Init container image; must have `sh` and `jq` (merge/create JSON). Default: `pascaliske/alpine-curl-jq` (jq pre-installed). | `pascaliske/alpine-curl-jq` |
 
 ### Security Configuration
 

@@ -89,6 +89,10 @@
         }
       }
     },
+    "nodeModulesWritable": {
+      "type": "boolean",
+      "description": "Mount a writable emptyDir at /usr/local/lib/node_modules so the openclaw process can write (e.g. for plugins)"
+    },
     "env": {
       "type": "object",
       "properties": {

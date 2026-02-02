@@ -201,6 +201,10 @@ secret:
     # Example (NOT RECOMMENDED for production):
     # ANTHROPIC_API_KEY: <base64-encoded-value>
 
+# Allow the openclaw process to write to /usr/local/lib/node_modules (e.g. for plugins).
+# Uses an emptyDir volume mounted at that path.
+nodeModulesWritable: true
+
 # Extra volumes
 extraVolumes: []
   # Example:

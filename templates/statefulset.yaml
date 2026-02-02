@@ -37,7 +37,7 @@ spec:
       - name: gateway-config
         image: {{ .Values.gateway.initImage | default "imega/jq:1.6" | quote }}
         {{- if .Values.persistence.enabled }}
-        command: ["sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq '.gateway.controlUi.allowInsecureAuth = true' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else echo '{\"gateway\":{\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.openclaw/openclaw.json; fi"]
+        command: ["sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then /jq '.gateway.controlUi.allowInsecureAuth = true' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else echo '{\"gateway\":{\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.openclaw/openclaw.json; fi"]
         volumeMounts:
         - name: data
           mountPath: {{ .Values.env.DATA_DIR | default "/data" }}

@@ -25,6 +25,8 @@ helm repo update
 
 **Note**: If you're installing from the GitHub repository directly, you can skip this step and install from the local chart directory.
 
+**Dev / prerelease versions**: The repo publishes both stable (e.g. `0.1.0`) and dev (e.g. `0.1.0-dev`) chart versions. In **Rancher**, prerelease versions are hidden by default. To see them: click your user avatar → **Preferences** → under **Helm Charts**, enable **Include Prerelease Versions**. From the CLI, install a specific version with `helm install my-openclaw openclaw/openclaw --version 0.1.0-dev`.
+
 ### Secure Secret Management (REQUIRED)
 
 **IMPORTANT**: Never put API keys or other secrets directly in `values.yaml` or pass them via `--set`. Always use Kubernetes Secrets.

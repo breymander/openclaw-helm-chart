@@ -37,7 +37,7 @@ spec:
       - name: gateway-config
         image: {{ .Values.gateway.initImage | default "pascaliske/alpine-curl-jq" | quote }}
         {{- if .Values.persistence.enabled }}
-        command: ["/bin/sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq --slurpfile override /config-source/openclaw.json '.gateway = ((.gateway // {}) * (($override)[0].gateway // {})) | .channels = ((.channels // {}) * (($override)[0].channels // {}))' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else cp /config-source/openclaw.json /data/.openclaw/openclaw.json; fi"]
+        command: ["/bin/sh", "-c", "mkdir -p /data/.openclaw && if [ -f /data/.openclaw/openclaw.json ]; then jq --slurpfile override /config-source/openclaw.json '.gateway = (((.gateway // {}) * (($override)[0].gateway // {})) | del(.channels)) | .channels = ((.channels // {}) * (($override)[0].channels // {}))' /data/.openclaw/openclaw.json > /tmp/out && mv /tmp/out /data/.openclaw/openclaw.json; else cp /config-source/openclaw.json /data/.openclaw/openclaw.json; fi"]
         volumeMounts:
         - name: data
           mountPath: {{ .Values.env.DATA_DIR | default "/data" }}

@@ -7,5 +7,5 @@ metadata:
     {{- include "openclaw.labels" . | nindent 4 }}
 data:
   openclaw.json: |
-    {"gateway":{"controlUi":{"allowInsecureAuth":true}}}
+    {{- include "openclaw.gatewayJson" . | nindent 4 }}
 {{- end }}

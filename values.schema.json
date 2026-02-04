@@ -89,6 +89,10 @@
         }
       }
     },
+    "nodeModulesWritable": {
+      "type": "boolean",
+      "description": "Mount a writable emptyDir at /usr/local/lib/node_modules so the openclaw process can write (e.g. for plugins)"
+    },
     "env": {
       "type": "object",
       "properties": {
@@ -150,7 +154,7 @@
     },
     "gateway": {
       "type": "object",
-      "description": "Gateway Control UI settings",
+      "description": "Gateway Control UI and built-in channels settings",
       "properties": {
         "controlUi": {
           "type": "object",
@@ -162,10 +166,15 @@
             }
           }
         },
+        "channels": {
+          "type": "object",
+          "description": "Built-in OpenClaw channels (WhatsApp, Telegram, Discord, Slack, etc.). Merged into gateway.channels in ~/.openclaw/openclaw.json.",
+          "additionalProperties": true
+        },
         "initImage": {
           "type": "string",
-          "description": "Init container image; must have sh and jq (merge/create JSON). Default: imega/jq.",
-          "default": "imega/jq:1.6"
+          "description": "Init container image; must have sh and jq (merge/create JSON). Default: pascaliske/alpine-curl-jq (jq pre-installed).",
+          "default": "pascaliske/alpine-curl-jq"
         }
       }
     },

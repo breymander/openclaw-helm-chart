@@ -25,6 +25,8 @@ helm repo update
 
 **Note**: If you're installing from the GitHub repository directly, you can skip this step and install from the local chart directory.
 
+**Dev / prerelease versions**: The repo publishes both stable (e.g. `0.1.0`) and dev (e.g. `0.1.0-dev`) chart versions. In **Rancher**, prerelease versions are hidden by default. To see them: click your user avatar → **Preferences** → under **Helm Charts**, enable **Include Prerelease Versions**. From the CLI, install a specific version with `helm install my-openclaw openclaw/openclaw --version 0.1.0-dev`.
+
 ### Secure Secret Management (REQUIRED)
 
 **IMPORTANT**: Never put API keys or other secrets directly in `values.yaml` or pass them via `--set`. Always use Kubernetes Secrets.
@@ -178,7 +180,8 @@ envFromSecret:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `gateway.controlUi.allowInsecureAuth` | Allow token-in-URL auth for Control UI (e.g. `?token=...`). With persistence: init merges into `/data/.openclaw/openclaw.json` (creates if missing). Without persistence: ephemeral config at `~/.openclaw/openclaw.json`. | `true` |
-| `gateway.initImage` | Init container image; must have `sh` and `jq` (merge/create JSON). Default: `imega/jq:1.6`. | `imega/jq:1.6` |
+| `gateway.channels` | Built-in OpenClaw channels (WhatsApp, Telegram, Discord, Slack, Google Chat, etc.). Merged into `gateway.channels` in `~/.openclaw/openclaw.json`. Put tokens in `existingSecret` and reference in channel config if the app supports env vars. See [OpenClaw channels](https://docs.openclaw.ai/channels) and examples below. | `{}` |
+| `gateway.initImage` | Init container image; must have `sh` and `jq` (merge/create JSON). Default: `pascaliske/alpine-curl-jq` (jq pre-installed). | `pascaliske/alpine-curl-jq` |
 
 ### Security Configuration
 
@@ -390,6 +393,86 @@ existingSecret:
     ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
     TELEGRAM_BOT_TOKEN: TELEGRAM_BOT_TOKEN
 ```
+
+### With built-in channels (Telegram)
+
+OpenClaw supports built-in channels (WhatsApp, Telegram, Discord, Slack, Google Chat, and more). Configure them under `gateway.channels`. Put bot tokens in `existingSecret` and reference the env var in your channel config if the app supports it, or configure tokens via the Control UI after install.
+
+```yaml
+existingSecret:
+  name: openclaw-secrets
+  keys:
+    ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    OPENCLAW_GATEWAY_TOKEN: OPENCLAW_GATEWAY_TOKEN
+    TELEGRAM_BOT_TOKEN: TELEGRAM_BOT_TOKEN
+
+gateway:
+  controlUi:
+    allowInsecureAuth: true
+  channels:
+    telegram:
+      enabled: true
+      allowFrom: ["123456789"]   # Your Telegram user ID
+      groupPolicy: "allowlist"
+      groupAllowFrom: ["123456789"]
+      groups:
+        "*": { requireMention: true }
+```
+
+Create the secret with your Telegram bot token (from [@BotFather](https://t.me/BotFather)):
+
+```bash
+kubectl create secret generic openclaw-secrets \
+  --from-literal=ANTHROPIC_API_KEY=your-api-key \
+  --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32) \
+  --from-literal=TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+```
+
+### With built-in channels (Discord)
+
+```yaml
+existingSecret:
+  name: openclaw-secrets
+  keys:
+    ANTHROPIC_API_KEY: ANTHROPIC_API_KEY
+    OPENCLAW_GATEWAY_TOKEN: OPENCLAW_GATEWAY_TOKEN
+
+gateway:
+  controlUi:
+    allowInsecureAuth: true
+  channels:
+    discord:
+      enabled: true
+      dm:
+        enabled: true
+        allowFrom: ["your-discord-username"]
+      guilds:
+        "123456789012345678":   # Your server (guild) ID
+          slug: "my-server"
+          requireMention: false
+          channels:
+            general: { allow: true }
+            help: { allow: true, requireMention: true }
+```
+
+Put the Discord bot token in your secret and configure it in the Control UI or via env if supported.
+
+### With built-in channels (WhatsApp)
+
+WhatsApp uses QR pairing via the Control UI; you only need to allowlist numbers in the chart:
+
+```yaml
+gateway:
+  controlUi:
+    allowInsecureAuth: true
+  channels:
+    whatsapp:
+      allowFrom: ["+15555550123"]
+      groups:
+        "*": { requireMention: true }
+```
+
+After install, open the Control UI to complete WhatsApp pairing (QR code).
 
 ### With Per-Replica Configuration
 
